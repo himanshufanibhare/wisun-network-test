@@ -1,0 +1,283 @@
+2025-10-02 16:42:42 - INFO - === PING TEST STARTED ===
+2025-10-02 16:42:42 - INFO - Details: Testing 28 devices
+2025-10-02 16:42:56 - INFO - STATUS: FAILED ❌ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-02 16:42:56 - INFO -   packets_transmitted: 5
+2025-10-02 16:42:56 - INFO -   packets_received: 0
+2025-10-02 16:42:56 - INFO -   packet_loss: 100.0
+2025-10-02 16:42:56 - INFO -   min_rtt: 0.0
+2025-10-02 16:42:56 - INFO -   avg_rtt: 0.0
+2025-10-02 16:42:56 - INFO -   max_rtt: 0.0
+2025-10-02 16:42:56 - INFO -   mdev: 0.0
+2025-10-02 16:42:56 - INFO - --------------------------------------------------
+2025-10-02 16:43:01 - INFO - STATUS: SUCCESS ✅ | Device: WN-L032-30 | IP: FD12:3456::B635:22FF:FE98:2523
+2025-10-02 16:43:01 - INFO -   packets_transmitted: 5
+2025-10-02 16:43:01 - INFO -   packets_received: 4
+2025-10-02 16:43:01 - INFO -   packet_loss: 20.0
+2025-10-02 16:43:01 - INFO -   min_rtt: 260.152
+2025-10-02 16:43:01 - INFO -   avg_rtt: 267.674
+2025-10-02 16:43:01 - INFO -   max_rtt: 275.338
+2025-10-02 16:43:01 - INFO -   mdev: 5.634
+2025-10-02 16:43:01 - INFO - --------------------------------------------------
+2025-10-02 16:43:05 - INFO - STATUS: SUCCESS ✅ | Device: WN-L033-30 | IP: FD12:3456::B635:22FF:FE98:252B
+2025-10-02 16:43:05 - INFO -   packets_transmitted: 5
+2025-10-02 16:43:05 - INFO -   packets_received: 5
+2025-10-02 16:43:05 - INFO -   packet_loss: 0.0
+2025-10-02 16:43:05 - INFO -   min_rtt: 136.003
+2025-10-02 16:43:05 - INFO -   avg_rtt: 157.184
+2025-10-02 16:43:05 - INFO -   max_rtt: 198.05
+2025-10-02 16:43:05 - INFO -   mdev: 25.288
+2025-10-02 16:43:05 - INFO - --------------------------------------------------
+2025-10-02 16:43:12 - INFO - STATUS: SUCCESS ✅ | Device: WN-L034-30 | IP: FD12:3456::62A4:23FF:FE37:A3B3
+2025-10-02 16:43:12 - INFO -   packets_transmitted: 5
+2025-10-02 16:43:12 - INFO -   packets_received: 5
+2025-10-02 16:43:12 - INFO -   packet_loss: 0.0
+2025-10-02 16:43:12 - INFO -   min_rtt: 376.462
+2025-10-02 16:43:12 - INFO -   avg_rtt: 1296.815
+2025-10-02 16:43:12 - INFO -   max_rtt: 2602.652
+2025-10-02 16:43:12 - INFO -   mdev: 853.1
+2025-10-02 16:43:12 - INFO - --------------------------------------------------
+2025-10-02 16:43:17 - INFO - STATUS: SUCCESS ✅ | Device: WN-L035-30 | IP: FD12:3456::B635:22FF:FE98:285B
+2025-10-02 16:43:17 - INFO -   packets_transmitted: 5
+2025-10-02 16:43:17 - INFO -   packets_received: 5
+2025-10-02 16:43:17 - INFO -   packet_loss: 0.0
+2025-10-02 16:43:17 - INFO -   min_rtt: 624.757
+2025-10-02 16:43:17 - INFO -   avg_rtt: 868.863
+2025-10-02 16:43:17 - INFO -   max_rtt: 1406.165
+2025-10-02 16:43:17 - INFO -   mdev: 275.725
+2025-10-02 16:43:17 - INFO - --------------------------------------------------
+2025-10-02 16:43:22 - INFO - STATUS: SUCCESS ✅ | Device: WN-L036-30 | IP: FD12:3456::62A4:23FF:FE37:A3A1
+2025-10-02 16:43:22 - INFO -   packets_transmitted: 5
+2025-10-02 16:43:22 - INFO -   packets_received: 5
+2025-10-02 16:43:22 - INFO -   packet_loss: 0.0
+2025-10-02 16:43:22 - INFO -   min_rtt: 276.159
+2025-10-02 16:43:22 - INFO -   avg_rtt: 504.929
+2025-10-02 16:43:22 - INFO -   max_rtt: 790.17
+2025-10-02 16:43:22 - INFO -   mdev: 231.263
+2025-10-02 16:43:22 - INFO - --------------------------------------------------
+2025-10-02 16:43:27 - INFO - STATUS: SUCCESS ✅ | Device: WN-L037-30 | IP: FD12:3456::B635:22FF:FE98:2539
+2025-10-02 16:43:27 - INFO -   packets_transmitted: 5
+2025-10-02 16:43:27 - INFO -   packets_received: 4
+2025-10-02 16:43:27 - INFO -   packet_loss: 20.0
+2025-10-02 16:43:27 - INFO -   min_rtt: 532.118
+2025-10-02 16:43:27 - INFO -   avg_rtt: 602.154
+2025-10-02 16:43:27 - INFO -   max_rtt: 715.618
+2025-10-02 16:43:27 - INFO -   mdev: 72.998
+2025-10-02 16:43:27 - INFO - --------------------------------------------------
+2025-10-02 16:43:32 - INFO - STATUS: SUCCESS ✅ | Device: WN-OF04-34 | IP: FD12:3456::B635:22FF:FE98:285C
+2025-10-02 16:43:32 - INFO -   packets_transmitted: 5
+2025-10-02 16:43:32 - INFO -   packets_received: 5
+2025-10-02 16:43:32 - INFO -   packet_loss: 0.0
+2025-10-02 16:43:32 - INFO -   min_rtt: 749.609
+2025-10-02 16:43:32 - INFO -   avg_rtt: 805.819
+2025-10-02 16:43:32 - INFO -   max_rtt: 968.285
+2025-10-02 16:43:32 - INFO -   mdev: 81.871
+2025-10-02 16:43:32 - INFO - --------------------------------------------------
+2025-10-02 16:43:37 - INFO - STATUS: SUCCESS ✅ | Device: WN-L050-30 | IP: FD12:3456::92FD:9FFF:FEEE:9DF7
+2025-10-02 16:43:37 - INFO -   packets_transmitted: 5
+2025-10-02 16:43:37 - INFO -   packets_received: 5
+2025-10-02 16:43:37 - INFO -   packet_loss: 0.0
+2025-10-02 16:43:37 - INFO -   min_rtt: 496.419
+2025-10-02 16:43:37 - INFO -   avg_rtt: 1223.197
+2025-10-02 16:43:37 - INFO -   max_rtt: 1680.318
+2025-10-02 16:43:37 - INFO -   mdev: 423.071
+2025-10-02 16:43:37 - INFO - --------------------------------------------------
+2025-10-02 16:43:42 - INFO - STATUS: SUCCESS ✅ | Device: WN-L051-30 | IP: FD12:3456::B635:22FF:FE98:285D
+2025-10-02 16:43:42 - INFO -   packets_transmitted: 5
+2025-10-02 16:43:42 - INFO -   packets_received: 5
+2025-10-02 16:43:42 - INFO -   packet_loss: 0.0
+2025-10-02 16:43:42 - INFO -   min_rtt: 496.421
+2025-10-02 16:43:42 - INFO -   avg_rtt: 1325.53
+2025-10-02 16:43:42 - INFO -   max_rtt: 2327.07
+2025-10-02 16:43:42 - INFO -   mdev: 718.138
+2025-10-02 16:43:42 - INFO - --------------------------------------------------
+2025-10-02 16:43:48 - INFO - STATUS: SUCCESS ✅ | Device: WN-L038-30 | IP: FD12:3456::B635:22FF:FE98:253F
+2025-10-02 16:43:48 - INFO -   packets_transmitted: 5
+2025-10-02 16:43:48 - INFO -   packets_received: 5
+2025-10-02 16:43:48 - INFO -   packet_loss: 0.0
+2025-10-02 16:43:48 - INFO -   min_rtt: 1051.499
+2025-10-02 16:43:48 - INFO -   avg_rtt: 2016.084
+2025-10-02 16:43:48 - INFO -   max_rtt: 2783.806
+2025-10-02 16:43:48 - INFO -   mdev: 653.364
+2025-10-02 16:43:48 - INFO - --------------------------------------------------
+2025-10-02 16:44:02 - INFO - STATUS: FAILED ❌ | Device: WN-L039-30 | IP: FD12:3456::62A4:23FF:FE37:A3A8
+2025-10-02 16:44:02 - INFO -   packets_transmitted: 5
+2025-10-02 16:44:02 - INFO -   packets_received: 0
+2025-10-02 16:44:02 - INFO -   packet_loss: 100.0
+2025-10-02 16:44:02 - INFO -   min_rtt: 0.0
+2025-10-02 16:44:02 - INFO -   avg_rtt: 0.0
+2025-10-02 16:44:02 - INFO -   max_rtt: 0.0
+2025-10-02 16:44:02 - INFO -   mdev: 0.0
+2025-10-02 16:44:02 - INFO - --------------------------------------------------
+2025-10-02 16:44:17 - INFO - STATUS: FAILED ❌ | Device: WN-L040-30 | IP: FD12:3456::B635:22FF:FE98:2541
+2025-10-02 16:44:17 - INFO -   packets_transmitted: 5
+2025-10-02 16:44:17 - INFO -   packets_received: 0
+2025-10-02 16:44:17 - INFO -   packet_loss: 100.0
+2025-10-02 16:44:17 - INFO -   min_rtt: 0.0
+2025-10-02 16:44:17 - INFO -   avg_rtt: 0.0
+2025-10-02 16:44:17 - INFO -   max_rtt: 0.0
+2025-10-02 16:44:17 - INFO -   mdev: 0.0
+2025-10-02 16:44:17 - INFO - --------------------------------------------------
+2025-10-02 16:44:31 - INFO - STATUS: FAILED ❌ | Device: WN-L041-30 | IP: FD12:3456::B635:22FF:FE98:2529
+2025-10-02 16:44:31 - INFO -   packets_transmitted: 5
+2025-10-02 16:44:31 - INFO -   packets_received: 0
+2025-10-02 16:44:31 - INFO -   packet_loss: 100.0
+2025-10-02 16:44:31 - INFO -   min_rtt: 0.0
+2025-10-02 16:44:31 - INFO -   avg_rtt: 0.0
+2025-10-02 16:44:31 - INFO -   max_rtt: 0.0
+2025-10-02 16:44:31 - INFO -   mdev: 0.0
+2025-10-02 16:44:31 - INFO - --------------------------------------------------
+2025-10-02 16:44:45 - INFO - STATUS: FAILED ❌ | Device: WN-L042-30 | IP: FD12:3456::62A4:23FF:FE37:A3AC
+2025-10-02 16:44:45 - INFO -   packets_transmitted: 5
+2025-10-02 16:44:45 - INFO -   packets_received: 0
+2025-10-02 16:44:45 - INFO -   packet_loss: 100.0
+2025-10-02 16:44:45 - INFO -   min_rtt: 0.0
+2025-10-02 16:44:45 - INFO -   avg_rtt: 0.0
+2025-10-02 16:44:45 - INFO -   max_rtt: 0.0
+2025-10-02 16:44:45 - INFO -   mdev: 0.0
+2025-10-02 16:44:45 - INFO - --------------------------------------------------
+2025-10-02 16:44:59 - INFO - STATUS: FAILED ❌ | Device: WN-L043-30 | IP: FD12:3456::62A4:23FF:FE37:A39F
+2025-10-02 16:44:59 - INFO -   packets_transmitted: 5
+2025-10-02 16:44:59 - INFO -   packets_received: 0
+2025-10-02 16:44:59 - INFO -   packet_loss: 100.0
+2025-10-02 16:44:59 - INFO -   min_rtt: 0.0
+2025-10-02 16:44:59 - INFO -   avg_rtt: 0.0
+2025-10-02 16:44:59 - INFO -   max_rtt: 0.0
+2025-10-02 16:44:59 - INFO -   mdev: 0.0
+2025-10-02 16:44:59 - INFO - --------------------------------------------------
+2025-10-02 16:45:13 - INFO - STATUS: FAILED ❌ | Device: WN-L044-30 | IP: FD12:3456::B635:22FF:FE98:2534
+2025-10-02 16:45:13 - INFO -   packets_transmitted: 5
+2025-10-02 16:45:13 - INFO -   packets_received: 0
+2025-10-02 16:45:13 - INFO -   packet_loss: 100.0
+2025-10-02 16:45:13 - INFO -   min_rtt: 0.0
+2025-10-02 16:45:13 - INFO -   avg_rtt: 0.0
+2025-10-02 16:45:13 - INFO -   max_rtt: 0.0
+2025-10-02 16:45:13 - INFO -   mdev: 0.0
+2025-10-02 16:45:13 - INFO - --------------------------------------------------
+2025-10-02 16:45:27 - INFO - STATUS: FAILED ❌ | Device: WN-L045-30 | IP: FD12:3456::B635:22FF:FE98:2524
+2025-10-02 16:45:27 - INFO -   packets_transmitted: 5
+2025-10-02 16:45:27 - INFO -   packets_received: 0
+2025-10-02 16:45:27 - INFO -   packet_loss: 100.0
+2025-10-02 16:45:27 - INFO -   min_rtt: 0.0
+2025-10-02 16:45:27 - INFO -   avg_rtt: 0.0
+2025-10-02 16:45:27 - INFO -   max_rtt: 0.0
+2025-10-02 16:45:27 - INFO -   mdev: 0.0
+2025-10-02 16:45:27 - INFO - --------------------------------------------------
+2025-10-02 16:45:41 - INFO - STATUS: FAILED ❌ | Device: WN-L047-30 | IP: FD12:3456::92FD:9FFF:FEEE:9D40
+2025-10-02 16:45:41 - INFO -   packets_transmitted: 5
+2025-10-02 16:45:41 - INFO -   packets_received: 0
+2025-10-02 16:45:41 - INFO -   packet_loss: 100.0
+2025-10-02 16:45:41 - INFO -   min_rtt: 0.0
+2025-10-02 16:45:41 - INFO -   avg_rtt: 0.0
+2025-10-02 16:45:41 - INFO -   max_rtt: 0.0
+2025-10-02 16:45:41 - INFO -   mdev: 0.0
+2025-10-02 16:45:41 - INFO - --------------------------------------------------
+2025-10-02 16:45:55 - INFO - STATUS: FAILED ❌ | Device: WN-L048-30 | IP: FD12:3456::B635:22FF:FE98:29A6
+2025-10-02 16:45:55 - INFO -   packets_transmitted: 5
+2025-10-02 16:45:55 - INFO -   packets_received: 0
+2025-10-02 16:45:55 - INFO -   packet_loss: 100.0
+2025-10-02 16:45:55 - INFO -   min_rtt: 0.0
+2025-10-02 16:45:55 - INFO -   avg_rtt: 0.0
+2025-10-02 16:45:55 - INFO -   max_rtt: 0.0
+2025-10-02 16:45:55 - INFO -   mdev: 0.0
+2025-10-02 16:45:55 - INFO - --------------------------------------------------
+2025-10-02 16:45:59 - INFO - STATUS: FAILED ❌ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-02 16:45:59 - INFO -   packets_transmitted: 100
+2025-10-02 16:45:59 - INFO -   packets_received: 0
+2025-10-02 16:45:59 - INFO -   packet_loss: 100.0
+2025-10-02 16:45:59 - INFO -   min_rtt: 0.0
+2025-10-02 16:45:59 - INFO -   avg_rtt: 0.0
+2025-10-02 16:45:59 - INFO -   max_rtt: 0.0
+2025-10-02 16:45:59 - INFO -   mdev: 0.0
+2025-10-02 16:45:59 - INFO - --------------------------------------------------
+2025-10-02 16:46:09 - INFO - STATUS: FAILED ❌ | Device: WN-L052-30 | IP: FD12:3456::62A4:23FF:FE37:A3AD
+2025-10-02 16:46:09 - INFO -   packets_transmitted: 5
+2025-10-02 16:46:09 - INFO -   packets_received: 0
+2025-10-02 16:46:09 - INFO -   packet_loss: 100.0
+2025-10-02 16:46:09 - INFO -   min_rtt: 0.0
+2025-10-02 16:46:09 - INFO -   avg_rtt: 0.0
+2025-10-02 16:46:09 - INFO -   max_rtt: 0.0
+2025-10-02 16:46:09 - INFO -   mdev: 0.0
+2025-10-02 16:46:09 - INFO - --------------------------------------------------
+2025-10-02 16:46:23 - INFO - STATUS: FAILED ❌ | Device: WN-L053-30 | IP: FD12:3456::B635:22FF:FE98:252C
+2025-10-02 16:46:23 - INFO -   packets_transmitted: 5
+2025-10-02 16:46:23 - INFO -   packets_received: 0
+2025-10-02 16:46:23 - INFO -   packet_loss: 100.0
+2025-10-02 16:46:23 - INFO -   min_rtt: 0.0
+2025-10-02 16:46:23 - INFO -   avg_rtt: 0.0
+2025-10-02 16:46:23 - INFO -   max_rtt: 0.0
+2025-10-02 16:46:23 - INFO -   mdev: 0.0
+2025-10-02 16:46:23 - INFO - --------------------------------------------------
+2025-10-02 16:46:37 - INFO - STATUS: FAILED ❌ | Device: WN-L054-30 | IP: FD12:3456::B635:22FF:FE98:251E
+2025-10-02 16:46:37 - INFO -   packets_transmitted: 5
+2025-10-02 16:46:37 - INFO -   packets_received: 0
+2025-10-02 16:46:37 - INFO -   packet_loss: 100.0
+2025-10-02 16:46:37 - INFO -   min_rtt: 0.0
+2025-10-02 16:46:37 - INFO -   avg_rtt: 0.0
+2025-10-02 16:46:37 - INFO -   max_rtt: 0.0
+2025-10-02 16:46:37 - INFO -   mdev: 0.0
+2025-10-02 16:46:37 - INFO - --------------------------------------------------
+2025-10-02 16:46:51 - INFO - STATUS: FAILED ❌ | Device: WN-VA24-30 | IP: FD12:3456::B635:22FF:FE98:253E
+2025-10-02 16:46:51 - INFO -   packets_transmitted: 5
+2025-10-02 16:46:51 - INFO -   packets_received: 0
+2025-10-02 16:46:51 - INFO -   packet_loss: 100.0
+2025-10-02 16:46:51 - INFO -   min_rtt: 0.0
+2025-10-02 16:46:51 - INFO -   avg_rtt: 0.0
+2025-10-02 16:46:51 - INFO -   max_rtt: 0.0
+2025-10-02 16:46:51 - INFO -   mdev: 0.0
+2025-10-02 16:46:51 - INFO - --------------------------------------------------
+2025-10-02 16:46:56 - INFO - STATUS: SUCCESS ✅ | Device: WN-VA64-30 | IP: FD12:3456::B635:22FF:FE98:285E
+2025-10-02 16:46:56 - INFO -   packets_transmitted: 5
+2025-10-02 16:46:56 - INFO -   packets_received: 5
+2025-10-02 16:46:56 - INFO -   packet_loss: 0.0
+2025-10-02 16:46:56 - INFO -   min_rtt: 382.309
+2025-10-02 16:46:56 - INFO -   avg_rtt: 458.445
+2025-10-02 16:46:56 - INFO -   max_rtt: 637.185
+2025-10-02 16:46:56 - INFO -   mdev: 93.277
+2025-10-02 16:46:56 - INFO - --------------------------------------------------
+2025-10-02 16:47:00 - INFO - STATUS: SUCCESS ✅ | Device: WN-VC44-30 | IP: FD12:3456::62A4:23FF:FE37:A3A9
+2025-10-02 16:47:00 - INFO -   packets_transmitted: 5
+2025-10-02 16:47:00 - INFO -   packets_received: 5
+2025-10-02 16:47:00 - INFO -   packet_loss: 0.0
+2025-10-02 16:47:00 - INFO -   min_rtt: 128.103
+2025-10-02 16:47:00 - INFO -   avg_rtt: 173.062
+2025-10-02 16:47:00 - INFO -   max_rtt: 326.774
+2025-10-02 16:47:00 - INFO -   mdev: 77.096
+2025-10-02 16:47:00 - INFO - --------------------------------------------------
+2025-10-02 16:47:14 - INFO - STATUS: FAILED ❌ | Device: WN-NI04-34 | IP: FD12:3456::62A4:23FF:FE37:A3AB
+2025-10-02 16:47:14 - INFO -   packets_transmitted: 5
+2025-10-02 16:47:14 - INFO -   packets_received: 0
+2025-10-02 16:47:14 - INFO -   packet_loss: 100.0
+2025-10-02 16:47:14 - INFO -   min_rtt: 0.0
+2025-10-02 16:47:14 - INFO -   avg_rtt: 0.0
+2025-10-02 16:47:14 - INFO -   max_rtt: 0.0
+2025-10-02 16:47:14 - INFO -   mdev: 0.0
+2025-10-02 16:47:14 - INFO - --------------------------------------------------
+2025-10-02 16:47:28 - INFO - STATUS: FAILED ❌ | Device: WN-L059-34 | IP: FD12:3456::B635:22FF:FE98:29A5
+2025-10-02 16:47:28 - INFO -   packets_transmitted: 5
+2025-10-02 16:47:28 - INFO -   packets_received: 0
+2025-10-02 16:47:28 - INFO -   packet_loss: 100.0
+2025-10-02 16:47:28 - INFO -   min_rtt: 0.0
+2025-10-02 16:47:28 - INFO -   avg_rtt: 0.0
+2025-10-02 16:47:28 - INFO -   max_rtt: 0.0
+2025-10-02 16:47:28 - INFO -   mdev: 0.0
+2025-10-02 16:47:28 - INFO - --------------------------------------------------
+2025-10-02 16:47:28 - INFO - Summary: SUMMARY: 12/28 devices reachable (42.9% success rate)
+2025-10-02 16:47:28 - INFO - === PING TEST COMPLETED ===
+2025-10-02 16:47:39 - INFO - STATUS: SUCCESS ✅ | Device: WN-L032-30 | IP: FD12:3456::B635:22FF:FE98:2523
+2025-10-02 16:47:39 - INFO -   packets_transmitted: 100
+2025-10-02 16:47:39 - INFO -   packets_received: 100
+2025-10-02 16:47:39 - INFO -   packet_loss: 0.0
+2025-10-02 16:47:39 - INFO -   min_rtt: 252.959
+2025-10-02 16:47:39 - INFO -   avg_rtt: 1035.894
+2025-10-02 16:47:39 - INFO -   max_rtt: 5496.886
+2025-10-02 16:47:39 - INFO -   mdev: 1078.148
+2025-10-02 16:47:39 - INFO - --------------------------------------------------
+2025-10-02 16:49:19 - INFO - STATUS: SUCCESS ✅ | Device: WN-L033-30 | IP: FD12:3456::B635:22FF:FE98:252B
+2025-10-02 16:49:19 - INFO -   packets_transmitted: 100
+2025-10-02 16:49:19 - INFO -   packets_received: 100
+2025-10-02 16:49:19 - INFO -   packet_loss: 0.0
+2025-10-02 16:49:19 - INFO -   min_rtt: 125.127
+2025-10-02 16:49:19 - INFO -   avg_rtt: 277.119
+2025-10-02 16:49:19 - INFO -   max_rtt: 1018.044
+2025-10-02 16:49:19 - INFO -   mdev: 183.093
+2025-10-02 16:49:19 - INFO - --------------------------------------------------

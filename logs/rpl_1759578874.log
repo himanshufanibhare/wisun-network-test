@@ -1,0 +1,7 @@
+2025-10-04 17:24:34 - INFO - === RPL RANK TEST STARTED (28 devices) ===
+2025-10-04 17:24:37 - INFO - Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537 | Status: FAILED ❌
+2025-10-04 17:24:37 - INFO - RPL Rank: No response / error
+2025-10-04 17:24:37 - INFO - --------------------------------------------------
+2025-10-04 17:24:37 - INFO - Test stopped by user
+2025-10-04 17:24:37 - INFO - SUMMARY: 0/28 devices responded (0.0% success rate)
+2025-10-04 17:24:37 - INFO - === RPL RANK TEST COMPLETED ===

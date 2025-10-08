@@ -1,0 +1,11 @@
+2025-10-03 20:07:36 - INFO - === PING TEST STARTED ===
+2025-10-03 20:07:36 - INFO - Details: Testing 28 devices
+2025-10-03 20:07:46 - INFO - STATUS: SUCCESS ✅ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-03 20:07:46 - INFO -   packets_transmitted: 10
+2025-10-03 20:07:46 - INFO -   packets_received: 10
+2025-10-03 20:07:46 - INFO -   packet_loss: 0.0
+2025-10-03 20:07:46 - INFO -   min_rtt: 252.103
+2025-10-03 20:07:46 - INFO -   avg_rtt: 412.133
+2025-10-03 20:07:46 - INFO -   max_rtt: 1065.738
+2025-10-03 20:07:46 - INFO -   mdev: 287.037
+2025-10-03 20:07:46 - INFO - --------------------------------------------------

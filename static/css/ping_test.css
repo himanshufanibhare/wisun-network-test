@@ -1,0 +1,156 @@
+/* Ping Test Specific CSS */
+
+:root {
+    --primary-color: #0d6efd;
+    --success-color: #198754;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #0dcaf0;
+    --ping-primary: #0066cc;
+}
+
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+.card-title {
+    font-weight: 600;
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.progress {
+    border-radius: 10px;
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    border-radius: 10px;
+    transition: width 0.3s ease-in-out;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Ping-specific status colors */
+#resultsTable .status-success {
+    color: var(--success-color);
+    font-weight: 600;
+}
+
+#resultsTable .status-warning {
+    color: #fd7e14;
+    font-weight: 600;
+}
+
+#resultsTable .status-poor {
+    color: #b86b00;
+    font-weight: 700;
+}
+
+#resultsTable .status-danger {
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+/* Ping test table styling */
+#resultsTable {
+    font-size: 0.9em;
+    margin-bottom: 0;
+}
+
+#resultsTable th {
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 0.4rem 0.3rem;
+    font-size: 0.9em;
+    background-color: #f8f9fa;
+}
+
+#resultsTable td {
+    text-align: center;
+    vertical-align: middle;
+    padding: 0.3rem 0.25rem;
+    line-height: 1.2;
+}
+
+#resultsTable .ip-column {
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+    color: var(--ping-primary);
+}
+
+#resultsTable .metric-column {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+#resultsTable .srno-column {
+    font-weight: 600;
+    color: #6c757d;
+}
+
+/* Ping-specific button styling */
+#resultsTable .btn-sm {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75em;
+    line-height: 1.2;
+    border-radius: 0.2rem;
+}
+
+/* Ping test control buttons */
+.btn-primary {
+    background-color: var(--ping-primary);
+    border-color: var(--ping-primary);
+}
+
+.btn-primary:hover {
+    background-color: #0052a3;
+    border-color: #0052a3;
+}
+
+/* Ping-specific spinner */
+.spinner-border-primary {
+    color: var(--ping-primary);
+}
+
+/* Responsive adjustments for ping test */
+@media (max-width: 768px) {
+    #resultsTable {
+        font-size: 0.8em;
+    }
+
+    #resultsTable th,
+    #resultsTable td {
+        padding: 0.2rem 0.15rem;
+    }
+}

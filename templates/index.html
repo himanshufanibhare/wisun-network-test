@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Wi-SUN Network Test 2025 - Home{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-network-wired text-primary me-2"></i>
+            Wi-SUN Network Test 2025
+        </h1>
+        <p class="lead">Select a test to run on your network devices</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    {% for test_key, test_config in tests.items() %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">
+                    {% if test_key == 'ping' %}
+                    <i class="fas fa-signal text-success me-2"></i>
+                    {% elif test_key == 'rssl' %}
+                    <i class="fas fa-wifi text-warning me-2"></i>
+                    {% elif test_key == 'rpl' %}
+                    <i class="fas fa-route text-info me-2"></i>
+                    {% elif test_key == 'disconnections' %}
+                    <i class="fas fa-unlink text-danger me-2"></i>
+                    {% elif test_key == 'availability' %}
+                    <i class="fas fa-check-circle text-primary me-2"></i>
+                    {% endif %}
+                    {{ test_config.name }}
+                </h5>
+                <p class="card-text">{{ test_config.description }}</p>
+                <div class="mt-auto">
+                    <a href="{{ url_for('test_page', test_type=test_key) }}" class="btn btn-primary">
+                        <i class="fas fa-play me-1"></i>
+                        Configure & Run
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="fas fa-info-circle text-info me-2"></i>
+                    Test Information
+                </h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-unstyled mb-0">
+                            <li><strong>Ping Test:</strong> Tests basic connectivity using ICMP</li>
+                            <li><strong>RSSI Test:</strong> Measures signal strength (RSL In/Out)</li>
+                            <li><strong>RPL Rank Test:</strong> Checks routing protocol rank</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-unstyled mb-0">
+                            <li><strong>Disconnections Test:</strong> Checks disconnection statistics</li>
+                            <li><strong>Availability Test:</strong> Tests device availability</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

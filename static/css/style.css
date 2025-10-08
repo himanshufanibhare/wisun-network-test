@@ -1,0 +1,319 @@
+/* Custom CSS for Wi-SUN Network Test 2025 */
+
+:root {
+    --primary-color: #0d6efd;
+    --success-color: #198754;
+    --warning-color: #1100fd;
+    --danger-color: #dc3545;
+    --info-color: #0dcaf0;
+}
+
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+.card-title {
+    font-weight: 600;
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.progress {
+    border-radius: 10px;
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    border-radius: 10px;
+    transition: width 0.3s ease-in-out;
+}
+
+.progress-bar.progress-bar-striped {
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, .15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .15) 50%, rgba(255, 255, 255, .15) 75%, transparent 75%, transparent);
+    background-size: 1rem 1rem;
+    animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+    0% {
+        background-position-x: 1rem;
+    }
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+#logContent {
+    font-family: 'Courier New', monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    background-color: #f8f9fa !important;
+    border: 1px solid #dee2e6;
+    color: #212529;
+    line-height: 1.4;
+}
+
+.badge {
+    font-size: 0.8em;
+    padding: 0.5em 0.75em;
+    border-radius: 6px;
+}
+
+.test-status-ready {
+    background-color: var(--info-color) !important;
+}
+
+.test-status-running {
+    background-color: var(--warning-color) !important;
+    color: #000 !important;
+}
+
+.test-status-completed {
+    background-color: var(--success-color) !important;
+}
+
+.test-status-stopped {
+    background-color: var(--danger-color) !important;
+}
+
+.test-status-error {
+    background-color: var(--danger-color) !important;
+}
+
+/* Loading animations */
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+/* Custom scrollbar for log content */
+#logContent::-webkit-scrollbar {
+    width: 8px;
+}
+
+#logContent::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#logContent::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+#logContent::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+
+    .d-grid.gap-2 .btn:last-child {
+        margin-bottom: 0;
+    }
+
+    /* Adjust button layout for mobile */
+    .d-flex.gap-2 {
+        flex-direction: column;
+    }
+}
+
+/* Form styling */
+.form-control {
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Footer */
+footer {
+    margin-top: auto;
+}
+
+/* Test results styling */
+#testResults {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.result-item:last-child {
+    border-bottom: none;
+}
+
+.result-value {
+    font-weight: 600;
+}
+
+.success-text {
+    color: var(--success-color);
+}
+
+.danger-text {
+    color: var(--danger-color);
+}
+
+.warning-text {
+    color: var(--warning-color);
+}
+
+.info-text {
+    color: var(--info-color);
+}
+
+/* Results table styling */
+#resultsTable {
+    font-size: 0.9em;
+    margin-bottom: 0;
+}
+
+#resultsTable th {
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 0.4rem 0.3rem;
+    font-size: 0.9em;
+}
+
+#resultsTable td {
+    text-align: center;
+    vertical-align: middle;
+    padding: 0.3rem 0.25rem;
+    line-height: 1.2;
+}
+
+#resultsTable .status-success {
+    color: var(--success-color);
+    font-weight: 600;
+}
+
+#resultsTable .status-warning {
+    color: var(--warning-color);
+    font-weight: 600;
+}
+
+#resultsTable .status-poor {
+    /* Distinct from danger (red). Use a darker orange/brown to indicate poor connectivity */
+    color: #b86b00;
+    /* amber-brown */
+    font-weight: 700;
+}
+
+#resultsTable .status-danger {
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+#resultsTable .ip-column {
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+}
+
+#resultsTable .metric-column {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+/* Compact button styling for retest buttons */
+#resultsTable .btn-sm {
+    padding: 0.15rem 0.4rem;
+    font-size: 0.75em;
+    line-height: 1.2;
+    border-radius: 0.2rem;
+}
+
+#resultsTable .btn-sm i {
+    font-size: 0.8em;
+}
+
+/* Compact card body for results table */
+.card .card-body:has(#resultsTable) {
+    padding: 0.75rem;
+}
+
+/* Reduce header icon size in compact table */
+#resultsTable th i {
+    font-size: 0.85em;
+    margin-right: 0.25rem;
+}
+
+/* Progress bar enhancements */
+.progress {
+    border-radius: 10px;
+    background-color: #e9ecef;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar {
+    border-radius: 10px;
+    transition: width 0.6s ease;
+}
+
+/* Table hover effects */
+#resultsTable tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    cursor: pointer;
+}

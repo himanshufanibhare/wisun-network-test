@@ -1,0 +1,176 @@
+2025-10-02 15:38:53 - INFO - === PING TEST STARTED ===
+2025-10-02 15:38:53 - INFO - Details: Testing 28 devices
+2025-10-02 15:39:14 - INFO - STATUS: FAILED ❌ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-02 15:39:14 - INFO -   packets_transmitted: 10
+2025-10-02 15:39:14 - INFO -   packets_received: 0
+2025-10-02 15:39:14 - INFO -   packet_loss: 100.0
+2025-10-02 15:39:14 - INFO -   min_rtt: 0.0
+2025-10-02 15:39:14 - INFO -   avg_rtt: 0.0
+2025-10-02 15:39:14 - INFO -   max_rtt: 0.0
+2025-10-02 15:39:14 - INFO -   mdev: 0.0
+2025-10-02 15:39:14 - INFO - --------------------------------------------------
+2025-10-02 15:39:36 - INFO - STATUS: FAILED ❌ | Device: WN-L032-30 | IP: FD12:3456::B635:22FF:FE98:2523
+2025-10-02 15:39:36 - INFO -   packets_transmitted: 10
+2025-10-02 15:39:36 - INFO -   packets_received: 0
+2025-10-02 15:39:36 - INFO -   packet_loss: 100.0
+2025-10-02 15:39:36 - INFO -   min_rtt: 0.0
+2025-10-02 15:39:36 - INFO -   avg_rtt: 0.0
+2025-10-02 15:39:36 - INFO -   max_rtt: 0.0
+2025-10-02 15:39:36 - INFO -   mdev: 0.0
+2025-10-02 15:39:36 - INFO - --------------------------------------------------
+2025-10-02 15:39:50 - INFO - STATUS: SUCCESS ✅ | Device: WN-L033-30 | IP: FD12:3456::B635:22FF:FE98:252B
+2025-10-02 15:39:50 - INFO -   packets_transmitted: 10
+2025-10-02 15:39:50 - INFO -   packets_received: 3
+2025-10-02 15:39:50 - INFO -   packet_loss: 70.0
+2025-10-02 15:39:50 - INFO -   min_rtt: 2228.123
+2025-10-02 15:39:50 - INFO -   avg_rtt: 2461.373
+2025-10-02 15:39:50 - INFO -   max_rtt: 2675.896
+2025-10-02 15:39:50 - INFO -   mdev: 183.281
+2025-10-02 15:39:50 - INFO - --------------------------------------------------
+2025-10-02 15:40:11 - INFO - STATUS: FAILED ❌ | Device: WN-L034-30 | IP: FD12:3456::62A4:23FF:FE37:A3B3
+2025-10-02 15:40:11 - INFO -   packets_transmitted: 10
+2025-10-02 15:40:11 - INFO -   packets_received: 0
+2025-10-02 15:40:11 - INFO -   packet_loss: 100.0
+2025-10-02 15:40:11 - INFO -   min_rtt: 0.0
+2025-10-02 15:40:11 - INFO -   avg_rtt: 0.0
+2025-10-02 15:40:11 - INFO -   max_rtt: 0.0
+2025-10-02 15:40:11 - INFO -   mdev: 0.0
+2025-10-02 15:40:11 - INFO - --------------------------------------------------
+2025-10-02 15:40:32 - INFO - STATUS: FAILED ❌ | Device: WN-L035-30 | IP: FD12:3456::B635:22FF:FE98:285B
+2025-10-02 15:40:32 - INFO -   packets_transmitted: 10
+2025-10-02 15:40:32 - INFO -   packets_received: 0
+2025-10-02 15:40:32 - INFO -   packet_loss: 100.0
+2025-10-02 15:40:32 - INFO -   min_rtt: 0.0
+2025-10-02 15:40:32 - INFO -   avg_rtt: 0.0
+2025-10-02 15:40:32 - INFO -   max_rtt: 0.0
+2025-10-02 15:40:32 - INFO -   mdev: 0.0
+2025-10-02 15:40:32 - INFO - --------------------------------------------------
+2025-10-02 15:40:46 - INFO - STATUS: SUCCESS ✅ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-02 15:40:46 - INFO -   packets_transmitted: 100
+2025-10-02 15:40:46 - INFO -   packets_received: 24
+2025-10-02 15:40:46 - INFO -   packet_loss: 76.0
+2025-10-02 15:40:46 - INFO -   min_rtt: 131.658
+2025-10-02 15:40:46 - INFO -   avg_rtt: 9681.836
+2025-10-02 15:40:46 - INFO -   max_rtt: 35071.521
+2025-10-02 15:40:46 - INFO -   mdev: 12697.283
+2025-10-02 15:40:46 - INFO - --------------------------------------------------
+2025-10-02 15:40:52 - INFO - STATUS: SUCCESS ✅ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-02 15:40:52 - INFO -   packets_transmitted: 100
+2025-10-02 15:40:52 - INFO -   packets_received: 8
+2025-10-02 15:40:52 - INFO -   packet_loss: 92.0
+2025-10-02 15:40:52 - INFO -   min_rtt: 11028.653
+2025-10-02 15:40:52 - INFO -   avg_rtt: 29515.644
+2025-10-02 15:40:52 - INFO -   max_rtt: 35667.506
+2025-10-02 15:40:52 - INFO -   mdev: 7835.408
+2025-10-02 15:40:52 - INFO - --------------------------------------------------
+2025-10-02 15:40:52 - INFO - Test stopped by user
+2025-10-02 15:40:52 - INFO - Summary: SUMMARY: 1/28 devices reachable (3.6% success rate)
+2025-10-02 15:40:52 - INFO - === PING TEST COMPLETED ===
+2025-10-02 15:40:54 - INFO - STATUS: FAILED ❌ | Device: WN-L036-30 | IP: FD12:3456::62A4:23FF:FE37:A3A1
+2025-10-02 15:40:54 - INFO -   packets_transmitted: 10
+2025-10-02 15:40:54 - INFO -   packets_received: 0
+2025-10-02 15:40:54 - INFO -   packet_loss: 100.0
+2025-10-02 15:40:54 - INFO -   min_rtt: 0.0
+2025-10-02 15:40:54 - INFO -   avg_rtt: 0.0
+2025-10-02 15:40:54 - INFO -   max_rtt: 0.0
+2025-10-02 15:40:54 - INFO -   mdev: 0.0
+2025-10-02 15:40:54 - INFO - --------------------------------------------------
+2025-10-02 15:40:54 - INFO - Test stopped by user
+2025-10-02 15:40:54 - INFO - Summary: SUMMARY: 1/28 devices reachable (3.6% success rate)
+2025-10-02 15:40:54 - INFO - === PING TEST COMPLETED ===
+2025-10-02 15:40:58 - INFO - STATUS: SUCCESS ✅ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-02 15:40:58 - INFO -   packets_transmitted: 100
+2025-10-02 15:40:58 - INFO -   packets_received: 11
+2025-10-02 15:40:58 - INFO -   packet_loss: 89.0
+2025-10-02 15:40:58 - INFO -   min_rtt: 228.767
+2025-10-02 15:40:58 - INFO -   avg_rtt: 16446.676
+2025-10-02 15:40:58 - INFO -   max_rtt: 35366.355
+2025-10-02 15:40:58 - INFO -   mdev: 14642.891
+2025-10-02 15:40:58 - INFO - --------------------------------------------------
+2025-10-02 15:40:58 - INFO - Test stopped by user
+2025-10-02 15:40:58 - INFO - Summary: SUMMARY: 1/28 devices reachable (3.6% success rate)
+2025-10-02 15:40:58 - INFO - === PING TEST COMPLETED ===
+2025-10-02 15:41:01 - INFO - STATUS: SUCCESS ✅ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-02 15:41:01 - INFO -   packets_transmitted: 100
+2025-10-02 15:41:01 - INFO -   packets_received: 30
+2025-10-02 15:41:01 - INFO -   packet_loss: 70.0
+2025-10-02 15:41:01 - INFO -   min_rtt: 4590.696
+2025-10-02 15:41:01 - INFO -   avg_rtt: 27935.043
+2025-10-02 15:41:01 - INFO -   max_rtt: 42874.094
+2025-10-02 15:41:01 - INFO -   mdev: 8760.217
+2025-10-02 15:41:01 - INFO - --------------------------------------------------
+2025-10-02 15:41:01 - INFO - Test stopped by user
+2025-10-02 15:41:01 - INFO - Summary: SUMMARY: 1/28 devices reachable (3.6% success rate)
+2025-10-02 15:41:01 - INFO - === PING TEST COMPLETED ===
+2025-10-02 15:41:03 - INFO - STATUS: SUCCESS ✅ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-02 15:41:03 - INFO -   packets_transmitted: 100
+2025-10-02 15:41:03 - INFO -   packets_received: 8
+2025-10-02 15:41:03 - INFO -   packet_loss: 92.0
+2025-10-02 15:41:03 - INFO -   min_rtt: 9368.093
+2025-10-02 15:41:03 - INFO -   avg_rtt: 27462.796
+2025-10-02 15:41:03 - INFO -   max_rtt: 35687.564
+2025-10-02 15:41:03 - INFO -   mdev: 9464.786
+2025-10-02 15:41:03 - INFO - --------------------------------------------------
+2025-10-02 15:41:03 - INFO - Test stopped by user
+2025-10-02 15:41:03 - INFO - Summary: SUMMARY: 1/28 devices reachable (3.6% success rate)
+2025-10-02 15:41:03 - INFO - === PING TEST COMPLETED ===
+2025-10-02 15:41:03 - INFO - STATUS: SUCCESS ✅ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-02 15:41:03 - INFO -   packets_transmitted: 100
+2025-10-02 15:41:03 - INFO -   packets_received: 19
+2025-10-02 15:41:03 - INFO -   packet_loss: 81.0
+2025-10-02 15:41:03 - INFO -   min_rtt: 1656.564
+2025-10-02 15:41:03 - INFO -   avg_rtt: 28999.341
+2025-10-02 15:41:03 - INFO -   max_rtt: 45180.209
+2025-10-02 15:41:03 - INFO -   mdev: 11598.728
+2025-10-02 15:41:03 - INFO - --------------------------------------------------
+2025-10-02 15:41:03 - INFO - Test stopped by user
+2025-10-02 15:41:03 - INFO - Summary: SUMMARY: 1/28 devices reachable (3.6% success rate)
+2025-10-02 15:41:03 - INFO - === PING TEST COMPLETED ===
+2025-10-02 15:41:04 - INFO - STATUS: SUCCESS ✅ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-02 15:41:04 - INFO -   packets_transmitted: 100
+2025-10-02 15:41:04 - INFO -   packets_received: 9
+2025-10-02 15:41:04 - INFO -   packet_loss: 91.0
+2025-10-02 15:41:04 - INFO -   min_rtt: 9455.555
+2025-10-02 15:41:04 - INFO -   avg_rtt: 28514.536
+2025-10-02 15:41:04 - INFO -   max_rtt: 36347.893
+2025-10-02 15:41:04 - INFO -   mdev: 9727.409
+2025-10-02 15:41:04 - INFO - --------------------------------------------------
+2025-10-02 15:41:04 - INFO - Test stopped by user
+2025-10-02 15:41:04 - INFO - Summary: SUMMARY: 1/28 devices reachable (3.6% success rate)
+2025-10-02 15:41:04 - INFO - === PING TEST COMPLETED ===
+2025-10-02 15:41:05 - INFO - STATUS: SUCCESS ✅ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-02 15:41:05 - INFO -   packets_transmitted: 100
+2025-10-02 15:41:05 - INFO -   packets_received: 24
+2025-10-02 15:41:05 - INFO -   packet_loss: 76.0
+2025-10-02 15:41:05 - INFO -   min_rtt: 3139.771
+2025-10-02 15:41:05 - INFO -   avg_rtt: 26014.962
+2025-10-02 15:41:05 - INFO -   max_rtt: 38605.396
+2025-10-02 15:41:05 - INFO -   mdev: 9176.388
+2025-10-02 15:41:05 - INFO - --------------------------------------------------
+2025-10-02 15:41:05 - INFO - Test stopped by user
+2025-10-02 15:41:05 - INFO - Summary: SUMMARY: 1/28 devices reachable (3.6% success rate)
+2025-10-02 15:41:05 - INFO - === PING TEST COMPLETED ===
+2025-10-02 15:41:18 - INFO - STATUS: SUCCESS ✅ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-02 15:41:18 - INFO -   packets_transmitted: 100
+2025-10-02 15:41:18 - INFO -   packets_received: 5
+2025-10-02 15:41:18 - INFO -   packet_loss: 95.0
+2025-10-02 15:41:18 - INFO -   min_rtt: 22039.256
+2025-10-02 15:41:18 - INFO -   avg_rtt: 29847.651
+2025-10-02 15:41:18 - INFO -   max_rtt: 38086.101
+2025-10-02 15:41:18 - INFO -   mdev: 6385.075
+2025-10-02 15:41:18 - INFO - --------------------------------------------------
+2025-10-02 15:41:18 - INFO - Test stopped by user
+2025-10-02 15:41:18 - INFO - Summary: SUMMARY: 1/28 devices reachable (3.6% success rate)
+2025-10-02 15:41:18 - INFO - === PING TEST COMPLETED ===
+2025-10-02 15:44:54 - INFO - STATUS: SUCCESS ✅ | Device: WN-L032-30 | IP: FD12:3456::B635:22FF:FE98:2523
+2025-10-02 15:44:54 - INFO -   packets_transmitted: 100
+2025-10-02 15:44:54 - INFO -   packets_received: 53
+2025-10-02 15:44:54 - INFO -   packet_loss: 47.0
+2025-10-02 15:44:54 - INFO -   min_rtt: 38070.51
+2025-10-02 15:44:54 - INFO -   avg_rtt: 53538.91
+2025-10-02 15:44:54 - INFO -   max_rtt: 73710.149
+2025-10-02 15:44:54 - INFO -   mdev: 8268.752
+2025-10-02 15:44:54 - INFO - --------------------------------------------------
+2025-10-02 15:44:54 - INFO - Test stopped by user
+2025-10-02 15:44:54 - INFO - Summary: SUMMARY: 2/28 devices reachable (7.1% success rate)
+2025-10-02 15:44:54 - INFO - === PING TEST COMPLETED ===

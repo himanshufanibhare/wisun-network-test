@@ -1,0 +1,50 @@
+2025-10-02 18:52:56 - INFO - === PING TEST STARTED ===
+2025-10-02 18:52:56 - INFO - Details: Testing 28 devices
+2025-10-02 18:53:15 - INFO - STATUS: FAILED ❌ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-02 18:53:15 - INFO -   packets_transmitted: 10
+2025-10-02 18:53:15 - INFO -   packets_received: 0
+2025-10-02 18:53:15 - INFO -   packet_loss: 100.0
+2025-10-02 18:53:15 - INFO -   min_rtt: 0.0
+2025-10-02 18:53:15 - INFO -   avg_rtt: 0.0
+2025-10-02 18:53:15 - INFO -   max_rtt: 0.0
+2025-10-02 18:53:15 - INFO -   mdev: 0.0
+2025-10-02 18:53:15 - INFO - --------------------------------------------------
+2025-10-02 18:53:35 - INFO - STATUS: FAILED ❌ | Device: WN-L032-30 | IP: FD12:3456::B635:22FF:FE98:2523
+2025-10-02 18:53:35 - INFO -   packets_transmitted: 10
+2025-10-02 18:53:35 - INFO -   packets_received: 0
+2025-10-02 18:53:35 - INFO -   packet_loss: 100.0
+2025-10-02 18:53:35 - INFO -   min_rtt: 0.0
+2025-10-02 18:53:35 - INFO -   avg_rtt: 0.0
+2025-10-02 18:53:35 - INFO -   max_rtt: 0.0
+2025-10-02 18:53:35 - INFO -   mdev: 0.0
+2025-10-02 18:53:35 - INFO - --------------------------------------------------
+2025-10-02 18:53:54 - INFO - STATUS: FAILED ❌ | Device: WN-L033-30 | IP: FD12:3456::B635:22FF:FE98:252B
+2025-10-02 18:53:54 - INFO -   packets_transmitted: 10
+2025-10-02 18:53:54 - INFO -   packets_received: 0
+2025-10-02 18:53:54 - INFO -   packet_loss: 100.0
+2025-10-02 18:53:54 - INFO -   min_rtt: 0.0
+2025-10-02 18:53:54 - INFO -   avg_rtt: 0.0
+2025-10-02 18:53:54 - INFO -   max_rtt: 0.0
+2025-10-02 18:53:54 - INFO -   mdev: 0.0
+2025-10-02 18:53:54 - INFO - --------------------------------------------------
+2025-10-02 18:54:13 - INFO - STATUS: FAILED ❌ | Device: WN-L034-30 | IP: FD12:3456::62A4:23FF:FE37:A3B3
+2025-10-02 18:54:13 - INFO -   packets_transmitted: 10
+2025-10-02 18:54:13 - INFO -   packets_received: 0
+2025-10-02 18:54:13 - INFO -   packet_loss: 100.0
+2025-10-02 18:54:13 - INFO -   min_rtt: 0.0
+2025-10-02 18:54:13 - INFO -   avg_rtt: 0.0
+2025-10-02 18:54:13 - INFO -   max_rtt: 0.0
+2025-10-02 18:54:13 - INFO -   mdev: 0.0
+2025-10-02 18:54:13 - INFO - --------------------------------------------------
+2025-10-02 18:54:17 - INFO - STATUS: FAILED ❌ | Device: WN-L035-30 | IP: FD12:3456::B635:22FF:FE98:285B
+2025-10-02 18:54:17 - INFO -   packets_transmitted: 10
+2025-10-02 18:54:17 - INFO -   packets_received: 0
+2025-10-02 18:54:17 - INFO -   packet_loss: 100.0
+2025-10-02 18:54:17 - INFO -   min_rtt: 0.0
+2025-10-02 18:54:17 - INFO -   avg_rtt: 0.0
+2025-10-02 18:54:17 - INFO -   max_rtt: 0.0
+2025-10-02 18:54:17 - INFO -   mdev: 0.0
+2025-10-02 18:54:17 - INFO - --------------------------------------------------
+2025-10-02 18:54:17 - INFO - Test stopped by user
+2025-10-02 18:54:17 - INFO - Summary: SUMMARY: 0/28 devices reachable (0.0% success rate)
+2025-10-02 18:54:17 - INFO - === PING TEST COMPLETED ===

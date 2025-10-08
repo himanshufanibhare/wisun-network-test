@@ -1,0 +1,22 @@
+2025-10-02 18:54:46 - INFO - === RPL RANK TEST STARTED (28 devices) ===
+2025-10-02 18:55:05 - INFO - Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537 | Status: SUCCESS ✅
+2025-10-02 18:55:05 - INFO - RPL Rank: 128
+2025-10-02 18:55:05 - INFO - --------------------------------------------------
+2025-10-02 18:56:45 - INFO - Device: WN-L032-30 | IP: FD12:3456::B635:22FF:FE98:2523 | Status: FAILED ❌
+2025-10-02 18:56:45 - INFO - RPL Rank: No response / error
+2025-10-02 18:56:45 - INFO - --------------------------------------------------
+2025-10-02 18:58:25 - INFO - Device: WN-L033-30 | IP: FD12:3456::B635:22FF:FE98:252B | Status: FAILED ❌
+2025-10-02 18:58:25 - INFO - RPL Rank: No response / error
+2025-10-02 18:58:25 - INFO - --------------------------------------------------
+2025-10-02 19:00:05 - INFO - Device: WN-L034-30 | IP: FD12:3456::62A4:23FF:FE37:A3B3 | Status: FAILED ❌
+2025-10-02 19:00:05 - INFO - RPL Rank: No response / error
+2025-10-02 19:00:05 - INFO - --------------------------------------------------
+2025-10-02 19:01:45 - INFO - Device: WN-L035-30 | IP: FD12:3456::B635:22FF:FE98:285B | Status: FAILED ❌
+2025-10-02 19:01:45 - INFO - RPL Rank: No response / error
+2025-10-02 19:01:45 - INFO - --------------------------------------------------
+2025-10-02 19:03:25 - INFO - Device: WN-L036-30 | IP: FD12:3456::62A4:23FF:FE37:A3A1 | Status: FAILED ❌
+2025-10-02 19:03:25 - INFO - RPL Rank: No response / error
+2025-10-02 19:03:25 - INFO - --------------------------------------------------
+2025-10-02 19:03:25 - INFO - Test stopped by user
+2025-10-02 19:03:25 - INFO - SUMMARY: 1/28 devices responded (3.6% success rate)
+2025-10-02 19:03:25 - INFO - === RPL RANK TEST COMPLETED ===

@@ -1,0 +1,28 @@
+2025-10-02 19:48:45 - INFO - === RSL TEST STARTED (28 devices) ===
+2025-10-02 19:48:46 - INFO - Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537 | Status: SUCCESS ✅
+2025-10-02 19:48:46 - INFO - RSL In: -71 | RSL Out: -86
+2025-10-02 19:48:46 - INFO - --------------------------------------------------
+2025-10-02 19:48:47 - INFO - Device: WN-L032-30 | IP: FD12:3456::B635:22FF:FE98:2523 | Status: SUCCESS ✅
+2025-10-02 19:48:47 - INFO - RSL In: -80 | RSL Out: -78
+2025-10-02 19:48:47 - INFO - --------------------------------------------------
+2025-10-02 19:48:48 - INFO - Device: WN-L033-30 | IP: FD12:3456::B635:22FF:FE98:252B | Status: FAILED ❌
+2025-10-02 19:48:48 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:48:48 - INFO - --------------------------------------------------
+2025-10-02 19:48:49 - INFO - Device: WN-L034-30 | IP: FD12:3456::62A4:23FF:FE37:A3B3 | Status: FAILED ❌
+2025-10-02 19:48:49 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:48:49 - INFO - --------------------------------------------------
+2025-10-02 19:48:50 - INFO - Device: WN-L035-30 | IP: FD12:3456::B635:22FF:FE98:285B | Status: FAILED ❌
+2025-10-02 19:48:50 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:48:50 - INFO - --------------------------------------------------
+2025-10-02 19:48:51 - INFO - Device: WN-L036-30 | IP: FD12:3456::62A4:23FF:FE37:A3A1 | Status: FAILED ❌
+2025-10-02 19:48:51 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:48:51 - INFO - --------------------------------------------------
+2025-10-02 19:48:52 - INFO - Device: WN-L037-30 | IP: FD12:3456::B635:22FF:FE98:2539 | Status: FAILED ❌
+2025-10-02 19:48:52 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:48:52 - INFO - --------------------------------------------------
+2025-10-02 19:48:53 - INFO - Device: WN-OF04-34 | IP: FD12:3456::B635:22FF:FE98:285C | Status: FAILED ❌
+2025-10-02 19:48:53 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:48:53 - INFO - --------------------------------------------------
+2025-10-02 19:48:53 - INFO - Test stopped by user
+2025-10-02 19:48:53 - INFO - SUMMARY: 2/28 devices responded (7.1% success rate)
+2025-10-02 19:48:53 - INFO - === RSL TEST COMPLETED ===

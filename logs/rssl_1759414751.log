@@ -1,0 +1,40 @@
+2025-10-02 19:49:11 - INFO - === RSL TEST STARTED (28 devices) ===
+2025-10-02 19:49:12 - INFO - Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537 | Status: FAILED ❌
+2025-10-02 19:49:12 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:49:12 - INFO - --------------------------------------------------
+2025-10-02 19:49:13 - INFO - Device: WN-L032-30 | IP: FD12:3456::B635:22FF:FE98:2523 | Status: FAILED ❌
+2025-10-02 19:49:13 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:49:13 - INFO - --------------------------------------------------
+2025-10-02 19:49:14 - INFO - Device: WN-L033-30 | IP: FD12:3456::B635:22FF:FE98:252B | Status: FAILED ❌
+2025-10-02 19:49:14 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:49:14 - INFO - --------------------------------------------------
+2025-10-02 19:49:15 - INFO - Device: WN-L034-30 | IP: FD12:3456::62A4:23FF:FE37:A3B3 | Status: FAILED ❌
+2025-10-02 19:49:15 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:49:15 - INFO - --------------------------------------------------
+2025-10-02 19:49:16 - INFO - Device: WN-L035-30 | IP: FD12:3456::B635:22FF:FE98:285B | Status: FAILED ❌
+2025-10-02 19:49:16 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:49:16 - INFO - --------------------------------------------------
+2025-10-02 19:49:17 - INFO - Device: WN-L036-30 | IP: FD12:3456::62A4:23FF:FE37:A3A1 | Status: FAILED ❌
+2025-10-02 19:49:17 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:49:17 - INFO - --------------------------------------------------
+2025-10-02 19:49:18 - INFO - Device: WN-L037-30 | IP: FD12:3456::B635:22FF:FE98:2539 | Status: FAILED ❌
+2025-10-02 19:49:18 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:49:18 - INFO - --------------------------------------------------
+2025-10-02 19:49:19 - INFO - Device: WN-OF04-34 | IP: FD12:3456::B635:22FF:FE98:285C | Status: FAILED ❌
+2025-10-02 19:49:19 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:49:19 - INFO - --------------------------------------------------
+2025-10-02 19:49:20 - INFO - Device: WN-L050-30 | IP: FD12:3456::92FD:9FFF:FEEE:9DF7 | Status: FAILED ❌
+2025-10-02 19:49:20 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:49:20 - INFO - --------------------------------------------------
+2025-10-02 19:49:21 - INFO - Device: WN-L051-30 | IP: FD12:3456::B635:22FF:FE98:285D | Status: FAILED ❌
+2025-10-02 19:49:21 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:49:21 - INFO - --------------------------------------------------
+2025-10-02 19:49:22 - INFO - Device: WN-L038-30 | IP: FD12:3456::B635:22FF:FE98:253F | Status: FAILED ❌
+2025-10-02 19:49:22 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:49:22 - INFO - --------------------------------------------------
+2025-10-02 19:49:23 - INFO - Device: WN-L039-30 | IP: FD12:3456::62A4:23FF:FE37:A3A8 | Status: FAILED ❌
+2025-10-02 19:49:23 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:49:23 - INFO - --------------------------------------------------
+2025-10-02 19:49:23 - INFO - Test stopped by user
+2025-10-02 19:49:23 - INFO - SUMMARY: 0/28 devices responded (0.0% success rate)
+2025-10-02 19:49:23 - INFO - === RSL TEST COMPLETED ===

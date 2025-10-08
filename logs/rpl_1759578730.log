@@ -1,0 +1,67 @@
+2025-10-04 17:22:10 - INFO - === RPL RANK TEST STARTED (28 devices) ===
+2025-10-04 17:22:11 - INFO - Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537 | Status: FAILED ❌
+2025-10-04 17:22:11 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:11 - INFO - --------------------------------------------------
+2025-10-04 17:22:12 - INFO - Device: WN-L032-30 | IP: FD12:3456::B635:22FF:FE98:2523 | Status: FAILED ❌
+2025-10-04 17:22:12 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:12 - INFO - --------------------------------------------------
+2025-10-04 17:22:13 - INFO - Device: WN-L033-30 | IP: FD12:3456::B635:22FF:FE98:252B | Status: FAILED ❌
+2025-10-04 17:22:13 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:13 - INFO - --------------------------------------------------
+2025-10-04 17:22:14 - INFO - Device: WN-L034-30 | IP: FD12:3456::62A4:23FF:FE37:A3B3 | Status: FAILED ❌
+2025-10-04 17:22:14 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:14 - INFO - --------------------------------------------------
+2025-10-04 17:22:15 - INFO - Device: WN-L035-30 | IP: FD12:3456::B635:22FF:FE98:285B | Status: FAILED ❌
+2025-10-04 17:22:15 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:15 - INFO - --------------------------------------------------
+2025-10-04 17:22:16 - INFO - Device: WN-L036-30 | IP: FD12:3456::62A4:23FF:FE37:A3A1 | Status: FAILED ❌
+2025-10-04 17:22:16 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:16 - INFO - --------------------------------------------------
+2025-10-04 17:22:17 - INFO - Device: WN-L037-30 | IP: FD12:3456::B635:22FF:FE98:2539 | Status: FAILED ❌
+2025-10-04 17:22:17 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:17 - INFO - --------------------------------------------------
+2025-10-04 17:22:18 - INFO - Device: WN-OF04-34 | IP: FD12:3456::B635:22FF:FE98:285C | Status: FAILED ❌
+2025-10-04 17:22:18 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:18 - INFO - --------------------------------------------------
+2025-10-04 17:22:19 - INFO - Device: WN-L050-30 | IP: FD12:3456::92FD:9FFF:FEEE:9DF7 | Status: FAILED ❌
+2025-10-04 17:22:19 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:19 - INFO - --------------------------------------------------
+2025-10-04 17:22:20 - INFO - Device: WN-L051-30 | IP: FD12:3456::B635:22FF:FE98:285D | Status: FAILED ❌
+2025-10-04 17:22:20 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:20 - INFO - --------------------------------------------------
+2025-10-04 17:22:21 - INFO - Device: WN-L038-30 | IP: FD12:3456::B635:22FF:FE98:253F | Status: FAILED ❌
+2025-10-04 17:22:21 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:21 - INFO - --------------------------------------------------
+2025-10-04 17:22:22 - INFO - Device: WN-L039-30 | IP: FD12:3456::62A4:23FF:FE37:A3A8 | Status: FAILED ❌
+2025-10-04 17:22:22 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:22 - INFO - --------------------------------------------------
+2025-10-04 17:22:23 - INFO - Device: WN-L040-30 | IP: FD12:3456::B635:22FF:FE98:2541 | Status: FAILED ❌
+2025-10-04 17:22:23 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:23 - INFO - --------------------------------------------------
+2025-10-04 17:22:24 - INFO - Device: WN-L041-30 | IP: FD12:3456::B635:22FF:FE98:2529 | Status: FAILED ❌
+2025-10-04 17:22:24 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:24 - INFO - --------------------------------------------------
+2025-10-04 17:22:25 - INFO - Device: WN-L042-30 | IP: FD12:3456::62A4:23FF:FE37:A3AC | Status: FAILED ❌
+2025-10-04 17:22:25 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:25 - INFO - --------------------------------------------------
+2025-10-04 17:22:26 - INFO - Device: WN-L043-30 | IP: FD12:3456::62A4:23FF:FE37:A39F | Status: FAILED ❌
+2025-10-04 17:22:26 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:26 - INFO - --------------------------------------------------
+2025-10-04 17:22:27 - INFO - Device: WN-L044-30 | IP: FD12:3456::B635:22FF:FE98:2534 | Status: FAILED ❌
+2025-10-04 17:22:27 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:27 - INFO - --------------------------------------------------
+2025-10-04 17:22:28 - INFO - Device: WN-L045-30 | IP: FD12:3456::B635:22FF:FE98:2524 | Status: FAILED ❌
+2025-10-04 17:22:28 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:28 - INFO - --------------------------------------------------
+2025-10-04 17:22:29 - INFO - Device: WN-L047-30 | IP: FD12:3456::92FD:9FFF:FEEE:9D40 | Status: FAILED ❌
+2025-10-04 17:22:29 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:29 - INFO - --------------------------------------------------
+2025-10-04 17:22:30 - INFO - Device: WN-L048-30 | IP: FD12:3456::B635:22FF:FE98:29A6 | Status: FAILED ❌
+2025-10-04 17:22:30 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:30 - INFO - --------------------------------------------------
+2025-10-04 17:22:31 - INFO - Device: WN-L052-30 | IP: FD12:3456::62A4:23FF:FE37:A3AD | Status: FAILED ❌
+2025-10-04 17:22:31 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:31 - INFO - --------------------------------------------------
+2025-10-04 17:22:32 - INFO - Device: WN-L053-30 | IP: FD12:3456::B635:22FF:FE98:252C | Status: FAILED ❌
+2025-10-04 17:22:32 - INFO - RPL Rank: No response / error
+2025-10-04 17:22:32 - INFO - --------------------------------------------------

@@ -1,0 +1,13 @@
+2025-10-02 19:41:43 - INFO - === RSL TEST STARTED (28 devices) ===
+2025-10-02 19:41:45 - INFO - Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537 | Status: SUCCESS ✅
+2025-10-02 19:41:45 - INFO - RSL In: -71 | RSL Out: -87
+2025-10-02 19:41:45 - INFO - --------------------------------------------------
+2025-10-02 19:41:48 - INFO - Device: WN-L032-30 | IP: FD12:3456::B635:22FF:FE98:2523 | Status: SUCCESS ✅
+2025-10-02 19:41:48 - INFO - RSL In: -79 | RSL Out: -79
+2025-10-02 19:41:48 - INFO - --------------------------------------------------
+2025-10-02 19:43:28 - INFO - Device: WN-L033-30 | IP: FD12:3456::B635:22FF:FE98:252B | Status: FAILED ❌
+2025-10-02 19:43:28 - INFO - RSL In: No response / error | RSL Out: No response / error
+2025-10-02 19:43:28 - INFO - --------------------------------------------------
+2025-10-02 19:43:28 - INFO - Test stopped by user
+2025-10-02 19:43:28 - INFO - SUMMARY: 2/28 devices responded (7.1% success rate)
+2025-10-02 19:43:28 - INFO - === RSL TEST COMPLETED ===

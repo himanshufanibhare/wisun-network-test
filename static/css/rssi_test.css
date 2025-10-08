@@ -1,0 +1,179 @@
+/* RSSI Test Specific CSS */
+
+:root {
+    --primary-color: #0d6efd;
+    --success-color: #198754;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --info-color: #0dcaf0;
+    --rssi-primary: #6f42c1;
+    --rssi-signal-strong: #28a745;
+    --rssi-signal-weak: #ffc107;
+    --rssi-signal-poor: #dc3545;
+}
+
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: 600;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+.card-title {
+    font-weight: 600;
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.progress {
+    border-radius: 10px;
+    background-color: #e9ecef;
+}
+
+.progress-bar {
+    border-radius: 10px;
+    transition: width 0.3s ease-in-out;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* RSSI-specific status colors */
+#resultsTable .status-success {
+    color: var(--rssi-signal-strong);
+    font-weight: 600;
+}
+
+#resultsTable .status-warning {
+    color: var(--rssi-signal-weak);
+    font-weight: 600;
+}
+
+#resultsTable .status-danger {
+    color: var(--rssi-signal-poor);
+    font-weight: 600;
+}
+
+/* RSSI test table styling */
+#resultsTable {
+    font-size: 0.9em;
+    margin-bottom: 0;
+}
+
+#resultsTable th {
+    font-weight: 600;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+    padding: 0.4rem 0.3rem;
+    font-size: 0.9em;
+    background-color: #f8f9fa;
+}
+
+#resultsTable td {
+    text-align: center;
+    vertical-align: middle;
+    padding: 0.3rem 0.25rem;
+    line-height: 1.2;
+}
+
+#resultsTable .ip-column {
+    font-family: 'Courier New', monospace;
+    font-weight: 500;
+    color: var(--rssi-primary);
+}
+
+#resultsTable .metric-column {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+#resultsTable .srno-column {
+    font-weight: 600;
+    color: #6c757d;
+}
+
+/* RSSI signal strength indicators */
+.rssi-strong {
+    color: var(--rssi-signal-strong);
+    font-weight: 700;
+}
+
+.rssi-medium {
+    color: var(--rssi-signal-weak);
+    font-weight: 600;
+}
+
+.rssi-weak {
+    color: var(--rssi-signal-poor);
+    font-weight: 600;
+}
+
+/* RSSI test control buttons */
+.btn-primary {
+    background-color: var(--rssi-primary);
+    border-color: var(--rssi-primary);
+}
+
+.btn-primary:hover {
+    background-color: #5a359a;
+    border-color: #5a359a;
+}
+
+/* RSSI-specific spinner */
+.spinner-border-purple {
+    color: var(--rssi-primary);
+}
+
+/* Signal quality visualization */
+.signal-bar {
+    display: inline-block;
+    width: 4px;
+    height: 12px;
+    margin: 0 1px;
+    border-radius: 1px;
+}
+
+.signal-bar.active {
+    background-color: var(--rssi-signal-strong);
+}
+
+.signal-bar.inactive {
+    background-color: #dee2e6;
+}
+
+/* Responsive adjustments for RSSI test */
+@media (max-width: 768px) {
+    #resultsTable {
+        font-size: 0.8em;
+    }
+
+    #resultsTable th,
+    #resultsTable td {
+        padding: 0.2rem 0.15rem;
+    }
+}

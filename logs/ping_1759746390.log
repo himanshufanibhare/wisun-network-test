@@ -1,0 +1,14 @@
+2025-10-06 15:56:30 - INFO - === PING TEST STARTED ===
+2025-10-06 15:56:30 - INFO - Details: Testing 28 devices
+2025-10-06 15:56:39 - INFO - STATUS: FAILED ❌ | Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537
+2025-10-06 15:56:39 - INFO -   packets_transmitted: 10
+2025-10-06 15:56:39 - INFO -   packets_received: 0
+2025-10-06 15:56:39 - INFO -   packet_loss: 100.0
+2025-10-06 15:56:39 - INFO -   min_rtt: 0.0
+2025-10-06 15:56:39 - INFO -   avg_rtt: 0.0
+2025-10-06 15:56:39 - INFO -   max_rtt: 0.0
+2025-10-06 15:56:39 - INFO -   mdev: 0.0
+2025-10-06 15:56:39 - INFO - --------------------------------------------------
+2025-10-06 15:56:39 - INFO - Test stopped by user
+2025-10-06 15:56:39 - INFO - Summary: SUMMARY: 0/28 devices reachable (0.0% success rate) - Duration: 9s
+2025-10-06 15:56:39 - INFO - === PING TEST COMPLETED ===

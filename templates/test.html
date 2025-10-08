@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}{{ config.name }} - Wi-SUN Network Test 2025{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/generic_test.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex align-items-center mb-4">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary me-3">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+            <h1 class="mb-0">{{ config.name }}</h1>
+        </div>
+        <p class="lead">{{ config.description }}</p>
+    </div>
+</div>
+
+<!-- Test Controls at Top -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Test Configuration & Controls</h5>
+            </div>
+            <div class="card-body">
+                <form id="testForm">
+                    <div class="row align-items-end">
+                        <!-- Parameters -->
+                        <div class="col-md-8">
+                            <div class="row">
+                                {% for param in config.parameters %}
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ param.name }}" class="form-label fw-bold">{{ param.label }}</label>
+                                    <input type="{{ param.type }}" class="form-control form-control-lg"
+                                        id="{{ param.name }}" name="{{ param.name }}" value="{{ param.default }}" {% if
+                                        param.min is defined %}min="{{ param.min }}" {% endif %} {% if param.max is
+                                        defined %}max="{{ param.max }}" {% endif %} required>
+                                    {% if param.min is defined and param.max is defined %}
+                                    <div class="form-text">Range: {{ param.min }} - {{ param.max }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Control Buttons -->
+                        <div class="col-md-4 mb-3">
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success btn-sm flex-fill" id="startBtn">
+                                    <i class="fas fa-play me-1"></i>Start Test
+                                </button>
+                                <button type="button" class="btn btn-warning btn-sm flex-fill" id="pauseBtn" disabled>
+                                    <i class="fas fa-pause me-1"></i>Pause
+                                </button>
+                                <button type="button" class="btn btn-danger btn-sm flex-fill" id="stopBtn" disabled>
+                                    <i class="fas fa-stop me-1"></i>Stop Test
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Results Table -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Test Results</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped table-hover" id="resultsTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th><i class="fas fa-hashtag me-1"></i>Sr No.</th>
+                                <th>IP Address</th>
+                                <th>Label</th>
+                                <th>Packets TX</th>
+                                <th>Packets RX</th>
+                                <th>Loss (%)</th>
+                                <th>Min (ms)</th>
+                                <th>Max (ms)</th>
+                                <th>Avg (ms)</th>
+                                <th>Mdev (ms)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTableBody">
+                            <tr>
+                                <td colspan="12" class="text-center text-muted">
+                                    <i class="fas fa-info-circle me-2"></i>No test results available. Start a test to
+                                    see results here.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold">Overall Test Progress</span>
+                        <span id="overallProgressPercent" class="badge bg-primary">0%</span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                            id="overallProgressBar" role="progressbar" style="width: 0%">
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted" id="progressStatus">Ready to start test...</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Progress Panel -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Test Progress
+                </h5>
+                <div id="testStatus" class="badge bg-secondary">Ready</div>
+            </div>
+            <div class="card-body">
+                <!-- Progress Bar -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Progress</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar"
+                            role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted" id="currentDevice">Waiting to start...</small>
+                    </div>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div id="testSpinner" class="text-center d-none">
+                    <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p id="testSpinnerText" class="mt-3 fw-bold text-muted">Test in progress...</p>
+                </div>
+
+                <!-- Test Results -->
+                <div id="testResults" class="d-none">
+                    <h6>Test Results</h6>
+                    <div id="resultsSummary"></div>
+                </div>
+
+                <!-- Summary & Download -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div id="testSummary" class="small text-muted"></div>
+                    <div>
+                        <button class="btn btn-outline-primary btn-sm" id="downloadLogBtn" disabled>
+                            <i class="fas fa-download me-1"></i>Download Log
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Panel -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-alt me-2"></i>Test Logs
+                </h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" id="refreshLogs">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" id="downloadLogs" disabled>
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <pre id="logContent" class="bg-light p-3 rounded"
+                    style="height: 400px; overflow-y: auto; font-size: 0.85em;">No logs available</pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/generic_test.js') }}"></script>
+<script>
+    // Initialize generic test page
+    const testType = '{{ test_type }}';
+    initializeTestPage(testType);
+</script>
+{% endblock %}
