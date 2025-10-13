@@ -341,7 +341,7 @@ function updateResultsTable(deviceResult) {
     }
 
     // Determine if this is a failed test and set button accordingly
-    const isFailedTest = deviceResult.status === 'Failed' || deviceResult.status === 'Error' || (deviceResult.disconnected_total && deviceResult.disconnected_total > 0);
+    const isFailedTest = deviceResult.status && (deviceResult.status.includes('NO RESPONSE') || deviceResult.status === 'Failed' || deviceResult.status === 'Error');
     const buttonClass = isFailedTest ? 'btn-warning' : 'btn-outline-primary';
     const buttonText = isFailedTest ? 'Retry' : 'Retest';
     const buttonIcon = isFailedTest ? 'fa-exclamation-triangle' : 'fa-redo';
@@ -581,19 +581,15 @@ function updateSummaryFromTable() {
 
     rows.forEach(row => {
         const cells = row.cells;
-        let isSuccess = true;
+        let isSuccess = false;
 
-        // Look for disconnection count and status
+        // Look for status column that contains RESPONSE or NO RESPONSE
         for (let i = 0; i < cells.length; i++) {
             const cellText = cells[i].textContent.trim();
-            // Check if it's a disconnection count > 0
-            if (!isNaN(parseInt(cellText)) && parseInt(cellText) > 0) {
-                isSuccess = false;
-                break;
-            }
-            // Check for failed status
-            if (cellText === 'Failed' || cellText === 'Error') {
-                isSuccess = false;
+
+            // Check for successful response (handles both formats)
+            if (cellText.includes('RESPONSE ✅') || cellText === 'Connected') {
+                isSuccess = true;
                 break;
             }
         }

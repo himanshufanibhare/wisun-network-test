@@ -353,7 +353,7 @@ def run_single_device_test(test_type, ip, label, params):
                 'ip': ip,
                 'label': label,
                 'disconnected_total': response if response is not None else 'No response',
-                'status': 'Connected' if response is not None else 'Failed'
+                'status': 'RESPONSE ✅' if response is not None else 'NO RESPONSE ❌'
             }
             
             # Emit result via socket
