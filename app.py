@@ -295,6 +295,31 @@ def run_single_device_test(test_type, ip, label, params):
                 'device_result': device_result
             })
             
+        elif test_type == 'rssl':
+            timeout = params.get('timeout', 100)
+            
+            # Import and use RSSI test function
+            from tests.rssiTest import get_rsl
+            rsl_in, rsl_out = get_rsl(ip, timeout, None)  # No stop callback for single device retest
+            
+            # Format device result for frontend
+            device_result = {
+                'ip': ip,
+                'label': label,
+                'rsl_in': str(rsl_in) if rsl_in is not None else '-',
+                'rsl_out': str(rsl_out) if rsl_out is not None else '-',
+                'signal_quality': 'Good' if rsl_in is not None and rsl_out is not None else 'Poor',
+                'response_time': '-',  # RSL test doesn't measure response time
+                'link_status': 'Connected' if rsl_in is not None else 'Disconnected',
+                'connection_status': 'Success' if rsl_in is not None and rsl_out is not None else 'Failed'
+            }
+            
+            # Emit result via socket
+            socketio.emit('device_retest_result', {
+                'test_type': test_type,
+                'device_result': device_result
+            })
+            
         elif test_type == 'rpl':
             timeout = params.get('timeout', 100)
             
