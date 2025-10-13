@@ -346,7 +346,7 @@ function updateResultsTable(deviceResult) {
     const buttonText = isFailedTest ? 'Retry' : 'Retest';
     const buttonIcon = isFailedTest ? 'fa-exclamation-triangle' : 'fa-redo';
 
-    const deviceId = deviceResult.ip.replace(/[^a-zA-Z0-9]/g, '_');
+     const deviceId = deviceResult.ip.replace(/[^a-zA-Z0-9]/g, '_');
     const rowHTML = `
         <td class="sr-no">${srNo}</td>
         <td class="ip-address">${deviceResult.ip}</td>

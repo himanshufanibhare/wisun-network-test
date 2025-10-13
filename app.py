@@ -276,10 +276,15 @@ def run_single_device_test(test_type, ip, label, params):
             from tests.pingTest import ping_device
             result = ping_device(ip, count, timeout)
             
+            # Get hop count for this IP
+            from tests.hopCountTest import get_hop_count_for_ip
+            hop_count = get_hop_count_for_ip(ip)
+            
             # Format device result for frontend
             device_result = {
                 'ip': ip,
                 'label': label,
+                'hop_count': str(hop_count),
                 'packets_tx': result.get('packets_transmitted', 0),
                 'packets_rx': result.get('packets_received', 0),
                 'loss_percent': result.get('packet_loss', 100.0),
@@ -302,10 +307,14 @@ def run_single_device_test(test_type, ip, label, params):
             from tests.rssiTest import get_rsl
             rsl_in, rsl_out = get_rsl(ip, timeout, None)  # No stop callback for single device retest
             
+            # Get hop count for this IP
+            hop_count = get_hop_count_for_ip(ip)
+            
             # Format device result for frontend
             device_result = {
                 'ip': ip,
                 'label': label,
+                'hop_count': str(hop_count),
                 'rsl_in': str(rsl_in) if rsl_in is not None else '-',
                 'rsl_out': str(rsl_out) if rsl_out is not None else '-',
                 'signal_quality': 'Good' if rsl_in is not None and rsl_out is not None else 'Poor',

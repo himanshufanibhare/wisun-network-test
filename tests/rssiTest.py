@@ -8,6 +8,7 @@ import subprocess
 import json
 from tests.logger import get_logger
 from tests.ip import FAN11_FSK_IPV6
+from tests.hopCountTest import get_hop_count_for_ip
 
 def get_rsl(ip, timeout=100, stop_callback=None):
     """
@@ -103,9 +104,13 @@ def fetch_rsl_for_all(log_file=None, progress_callback=None, stop_callback=None,
         
         # Prepare device result for frontend display
         if progress_callback:
+            # Get hop count for this IP
+            hop_count = get_hop_count_for_ip(ip, stop_callback)
+            
             device_result = {
                 'ip': ip,
                 'label': device_name,
+                'hop_count': str(hop_count),
                 'rsl_in': str(rsl_in) if rsl_in is not None else '-',
                 'rsl_out': str(rsl_out) if rsl_out is not None else '-',
                 'signal_quality': 'Good' if rsl_in is not None and rsl_out is not None else 'Poor',
