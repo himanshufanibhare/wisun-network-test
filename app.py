@@ -374,7 +374,7 @@ def run_single_device_test(test_type, ip, label, params):
                 'ip': ip,
                 'label': label,
                 'availability': response if response is not None else 'No response',
-                'status': 'Available' if response is not None else 'Failed'
+                'status': 'AVAILABLE ✅' if response is not None else 'UNAVAILABLE ❌'
             }
             
             # Emit result via socket

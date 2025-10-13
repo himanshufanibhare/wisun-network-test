@@ -340,11 +340,11 @@ function updateResultsTable(deviceResult) {
         }
     }
 
-    // Determine if this is a failed test and set button accordingly
-    const isFailedTest = deviceResult.status === 'Failed' || deviceResult.status === 'Error' || deviceResult.status === 'Offline' || (deviceResult.availability && parseFloat(deviceResult.availability) < 100);
-    const buttonClass = isFailedTest ? 'btn-warning' : 'btn-outline-primary';
-    const buttonText = isFailedTest ? 'Retry' : 'Retest';
-    const buttonIcon = isFailedTest ? 'fa-exclamation-triangle' : 'fa-redo';
+    // Determine if this is an unavailable device and set button accordingly
+    const isUnavailable = deviceResult.status && (deviceResult.status.includes('UNAVAILABLE') || deviceResult.status === 'Failed');
+    const buttonClass = isUnavailable ? 'btn-warning' : 'btn-outline-primary';
+    const buttonText = isUnavailable ? 'Retry' : 'Retest';
+    const buttonIcon = isUnavailable ? 'fa-exclamation-triangle' : 'fa-redo';
 
     const deviceId = deviceResult.ip.replace(/[^a-zA-Z0-9]/g, '_');
     const rowHTML = `
@@ -581,29 +581,20 @@ function updateSummaryFromTable() {
 
     rows.forEach(row => {
         const cells = row.cells;
-        let isSuccess = true;
+        let isAvailable = false;
 
-        // Look for availability percentage and status
+        // Look for status column that contains AVAILABLE or UNAVAILABLE
         for (let i = 0; i < cells.length; i++) {
             const cellText = cells[i].textContent.trim();
 
-            // Check for failed status
-            if (cellText === 'Failed' || cellText === 'Error' || cellText === 'Offline') {
-                isSuccess = false;
+            // Check for AVAILABLE status (handles both formats)
+            if (cellText.includes('AVAILABLE ✅') || cellText === 'Available') {
+                isAvailable = true;
                 break;
-            }
-
-            // Check for availability percentage < 100%
-            if (cellText.includes('%')) {
-                const availability = parseFloat(cellText.replace('%', '')) || 0;
-                if (availability < 100) {
-                    isSuccess = false;
-                    break;
-                }
             }
         }
 
-        if (isSuccess) {
+        if (isAvailable) {
             successCount++;
         }
     });
