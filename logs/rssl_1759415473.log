@@ -1,9 +1,0 @@
-2025-10-02 20:01:13 - INFO - === RSL TEST STARTED (28 devices) ===
-2025-10-02 20:01:14 - INFO - Device: WN-L031-30 | IP: FD12:3456::B635:22FF:FE98:2537 | Status: SUCCESS ✅
-2025-10-02 20:01:14 - INFO - RSL In: -70 | RSL Out: -87
-2025-10-02 20:01:14 - INFO - --------------------------------------------------
-2025-10-02 20:01:19 - INFO - Device: WN-L032-30 | IP: FD12:3456::B635:22FF:FE98:2523 | Status: SUCCESS ✅
-2025-10-02 20:01:19 - INFO - RSL In: -78 | RSL Out: -82
-2025-10-02 20:01:19 - INFO - --------------------------------------------------
-2025-10-02 20:01:19 - INFO - Test paused, waiting...
-2025-10-02 20:01:20 - INFO - Test stopped while paused

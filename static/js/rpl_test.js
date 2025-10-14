@@ -348,6 +348,7 @@ function updateResultsTable(deviceResult) {
         <td class="sr-no">${srNo}</td>
         <td class="ip-address">${deviceResult.ip}</td>
         <td class="device-label">${deviceResult.label || '-'}</td>
+        <td class="hop-count">${deviceResult.hop_count || '-'}</td>
         <td class="rpl-rank">${deviceResult.rpl_data || '-'}</td>
         <td class="status">${deviceResult.status || 'Unknown'}</td>
         <td>

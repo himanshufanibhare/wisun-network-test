@@ -357,8 +357,8 @@ function updateResultsTable(deviceResult) {
     const rowHTML = `
         <td class="srno-column">${srNo}</td>
         <td class="ip-column">${deviceResult.ip}</td>
-        <td class="hop-count-column">${deviceResult.hop_count || '-'}</td>
         <td>${deviceResult.label || '-'}</td>
+        <td class="hop-count-column">${deviceResult.hop_count || '-'}</td>
         <td class="metric-column">${deviceResult.packets_tx || '-'}</td>
         <td class="metric-column">${deviceResult.packets_rx || '-'}</td>
         <td class="metric-column ${getStatusClass(deviceResult.loss_percent)}">${deviceResult.loss_percent !== undefined ? deviceResult.loss_percent + '%' : '-'}</td>

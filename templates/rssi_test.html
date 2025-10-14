@@ -106,8 +106,12 @@
                 <!-- Success Content -->
                 <div id="wisunTreeContent" class="d-none">
                     <div class="row mb-3">
-                        <div class="col-12">
+                        <div class="col-6">
                             <p class="mb-1"><strong>Generated:</strong> <span id="wisunTreeTimestamp"></span></p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p class="mb-1"><strong>Total Devices:</strong> <span id="wisunTreeDeviceCount"
+                                    class="badge bg-primary">-</span></p>
                         </div>
                     </div>
                     <pre id="wisunTreeOutput" class="bg-dark text-light p-3 rounded"
@@ -159,6 +163,7 @@
                     if (data.success) {
                         // Show success content
                         document.getElementById('wisunTreeTimestamp').textContent = data.timestamp;
+                        document.getElementById('wisunTreeDeviceCount').textContent = data.device_count || 0;
                         document.getElementById('wisunTreeOutput').textContent = data.output;
                         document.getElementById('wisunTreeContent').classList.remove('d-none');
                     } else {
@@ -238,8 +243,8 @@
                             <tr>
                                 <th><i class="fas fa-hashtag me-1"></i>Sr No.</th>
                                 <th><i class="fas fa-globe me-1"></i>IP Address</th>
-                                <th><i class="fas fa-route me-1"></i>Hop Count</th>
                                 <th><i class="fas fa-tag me-1"></i>Device Label</th>
+                                <th><i class="fas fa-route me-1"></i>Hop Count</th>
                                 <th><i class="fas fa-arrow-down me-1"></i>RSL In (dBm)</th>
                                 <th><i class="fas fa-arrow-up me-1"></i>RSL Out (dBm)</th>
                                 <th><i class="fas fa-check-circle me-1"></i>Connection Status</th>
@@ -248,7 +253,7 @@
                         </thead>
                         <tbody id="resultsTableBody">
                             <tr>
-                                <td colspan="8" class="text-center text-muted">
+                                <td colspan="7" class="text-center text-muted">
                                     <i class="fas fa-info-circle me-2"></i>No RSSI test results available. Start a test
                                     to see signal strength metrics here.
                                 </td>

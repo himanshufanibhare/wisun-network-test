@@ -346,23 +346,26 @@ function updateResultsTable(deviceResult) {
     const buttonText = isFailedTest ? 'Retry' : 'Retest';
     const buttonIcon = isFailedTest ? 'fa-exclamation-triangle' : 'fa-redo';
 
-     const deviceId = deviceResult.ip.replace(/[^a-zA-Z0-9]/g, '_');
+    const deviceId = deviceResult.ip.replace(/[^a-zA-Z0-9]/g, '_');
     const rowHTML = `
-        <td class="sr-no">${srNo}</td>
-        <td class="ip-address">${deviceResult.ip}</td>
-        <td class="device-label">${deviceResult.label || '-'}</td>
-        <td class="disconnected-total">${deviceResult.disconnected_total || '-'}</td>
-        <td class="status">${deviceResult.status || 'Unknown'}</td>
-        <td>
-            <button class="btn ${buttonClass} btn-sm" 
-                    onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')"
-                    id="retest_${deviceId}">
-                <i class="fas ${buttonIcon} me-1"></i>${buttonText}
-            </button>
-        </td>
-    `;
-
-    if (existingRow) {
+                            <tr>
+                                <td class="srno">${serialNumber}</td>
+                                <td class="ip-address">${deviceResult.ip}</td>
+                                <td class="device-label">${deviceResult.label || '-'}</td>
+                                <td class="hop-count">${deviceResult.hop_count || '-'}</td>
+                                <td class="disconnected-total">${deviceResult.disconnected_total || 0}</td>
+                                <td class="status">
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fas fa-clock"></i> In Progress
+                                    </span>
+                                </td>
+                                <td class="retest">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="retestDevice('${deviceResult.ip}')" disabled>
+                                        <i class="fas fa-redo"></i> Retest
+                                    </button>
+                                </td>
+                            </tr>
+                        `; if (existingRow) {
         existingRow.innerHTML = rowHTML;
     } else {
         const row = document.createElement('tr');

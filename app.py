@@ -15,6 +15,7 @@ from datetime import datetime
 
 # Import test modules
 from tests import pingTest, rssiTest, rplTest, disconnectionsTest, availabilityTest
+from tests.hopCountUtils import refresh_hop_counts, load_hop_counts, get_hop_count_for_ip, get_hop_count_summary
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'network-test-secret-key'
@@ -25,6 +26,7 @@ test_threads = {}
 stop_flags = {}
 test_status = {}
 pause_flags = {}
+hop_counts_initialized = False
 
 # Test configurations
 TEST_CONFIGS = {
@@ -66,14 +68,48 @@ TEST_CONFIGS = {
     }
 }
 
+def ensure_hop_counts_initialized():
+    """Ensure hop counts are initialized - call this on first access"""
+    global hop_counts_initialized
+    if not hop_counts_initialized:
+        print("🔄 Initializing hop counts on first access...")
+        try:
+            success = refresh_hop_counts()
+            if success:
+                hop_counts = load_hop_counts()
+                print(f"✅ Successfully initialized hop counts for {len(hop_counts)} devices")
+            else:
+                print("⚠️ Warning: Failed to initialize hop counts on first access")
+            hop_counts_initialized = True
+        except Exception as e:
+            print(f"❌ Error initializing hop counts on first access: {e}")
+
 @app.route('/')
 def index():
     """Main page - Test selection"""
+    # Always refresh hop counts when main page is accessed
+    print("🔄 Refreshing hop counts for main page access...")
+    try:
+        refresh_hop_counts()
+        hop_counts = load_hop_counts()
+        print(f"✅ Updated hop counts for {len(hop_counts)} devices")
+    except Exception as e:
+        print(f"⚠️ Warning: Failed to refresh hop counts on main page access: {e}")
+    
     return render_template('index.html', tests=TEST_CONFIGS)
 
 @app.route('/test/<test_type>')
 def test_page(test_type):
     """Individual test configuration and execution page"""
+    # Always refresh hop counts when a test page is accessed
+    print(f"🔄 Refreshing hop counts for {test_type} test page access...")
+    try:
+        refresh_hop_counts()
+        hop_counts = load_hop_counts()
+        print(f"✅ Updated hop counts for {len(hop_counts)} devices")
+    except Exception as e:
+        print(f"⚠️ Warning: Failed to refresh hop counts on page access: {e}")
+    
     if test_type not in TEST_CONFIGS:
         return "Test not found", 404
     
@@ -267,6 +303,11 @@ def resume_test():
 
 def run_single_device_test(test_type, ip, label, params):
     """Run test for a single device"""
+    
+    # Load hop counts for this retest
+    hop_counts = load_hop_counts()
+    hop_count = get_hop_count_for_ip(ip, hop_counts)
+    
     try:
         if test_type == 'ping':
             count = params.get('packet_count', 100)
@@ -276,15 +317,11 @@ def run_single_device_test(test_type, ip, label, params):
             from tests.pingTest import ping_device
             result = ping_device(ip, count, timeout)
             
-            # Get hop count for this IP
-            from tests.hopCountTest import get_hop_count_for_ip
-            hop_count = get_hop_count_for_ip(ip)
-            
             # Format device result for frontend
             device_result = {
                 'ip': ip,
                 'label': label,
-                'hop_count': str(hop_count),
+                'hop_count': hop_count,
                 'packets_tx': result.get('packets_transmitted', 0),
                 'packets_rx': result.get('packets_received', 0),
                 'loss_percent': result.get('packet_loss', 100.0),
@@ -307,14 +344,11 @@ def run_single_device_test(test_type, ip, label, params):
             from tests.rssiTest import get_rsl
             rsl_in, rsl_out = get_rsl(ip, timeout, None)  # No stop callback for single device retest
             
-            # Get hop count for this IP
-            hop_count = get_hop_count_for_ip(ip)
-            
             # Format device result for frontend
             device_result = {
                 'ip': ip,
                 'label': label,
-                'hop_count': str(hop_count),
+                'hop_count': hop_count,
                 'rsl_in': str(rsl_in) if rsl_in is not None else '-',
                 'rsl_out': str(rsl_out) if rsl_out is not None else '-',
                 'signal_quality': 'Good' if rsl_in is not None and rsl_out is not None else 'Poor',
@@ -340,6 +374,7 @@ def run_single_device_test(test_type, ip, label, params):
             device_result = {
                 'ip': ip,
                 'label': label,
+                'hop_count': hop_count,
                 'rpl_data': str(rpl_rank) if rpl_rank is not None else '-',
                 'status': 'Connected' if rpl_rank is not None else 'Failed'
             }
@@ -361,6 +396,7 @@ def run_single_device_test(test_type, ip, label, params):
             device_result = {
                 'ip': ip,
                 'label': label,
+                'hop_count': hop_count,
                 'disconnected_total': response if response is not None else 'No response',
                 'status': 'RESPONSE ✅' if response is not None else 'NO RESPONSE ❌'
             }
@@ -382,6 +418,7 @@ def run_single_device_test(test_type, ip, label, params):
             device_result = {
                 'ip': ip,
                 'label': label,
+                'hop_count': hop_count,
                 'availability': response if response is not None else 'No response',
                 'status': 'AVAILABLE ✅' if response is not None else 'UNAVAILABLE ❌'
             }
@@ -438,10 +475,25 @@ def download_logs(test_type):
 
 def run_test(test_type, params):
     """Run the actual test in background"""
+    
+    # Refresh hop counts before starting test
+    print(f"Refreshing hop counts before {test_type} test...")
+    try:
+        refresh_hop_counts()
+        hop_counts = load_hop_counts()
+        print(f"Loaded hop counts for {len(hop_counts)} devices")
+    except Exception as e:
+        print(f"Warning: Failed to refresh hop counts: {e}")
+        hop_counts = {}
+    
     def progress_callback(current, total, device_name, device_result=None):
         progress = int((current / total) * 100)
         test_status[test_type]['progress'] = progress
         test_status[test_type]['current_device'] = device_name
+        
+        # Add hop count to device result if available
+        if device_result and 'ip' in device_result:
+            device_result['hop_count'] = get_hop_count_for_ip(device_result['ip'], hop_counts)
         
         # Prepare socket data
         socket_data = {
@@ -621,22 +673,66 @@ def force_cleanup(test_type):
 def get_wisun_tree():
     """Get Wi-SUN tree status using wsbrd_cli status command"""
     try:
+        # First, refresh hop counts to ensure device count is up-to-date
+        print("🔄 Refreshing hop counts for Wi-SUN tree...")
+        try:
+            refresh_hop_counts()
+            print("✅ Hop counts refreshed for Wi-SUN tree")
+        except Exception as e:
+            print(f"⚠️ Warning: Failed to refresh hop counts for Wi-SUN tree: {e}")
+        
         result = subprocess.run(['wsbrd_cli', 'status'], 
                               capture_output=True, 
                               text=True, 
                               timeout=30)
         
+        # Get device count from hop_counts.json (excluding root node)
+        hop_count_data = load_hop_counts()
+        device_count = len(hop_count_data) if hop_count_data else 0
+        
+        # Try to get total_devices from hop_counts.json file
+        try:
+            hop_count_file = os.path.join(os.path.dirname(__file__), 'hop_counts.json')
+            if os.path.exists(hop_count_file):
+                with open(hop_count_file, 'r') as f:
+                    hop_data = json.load(f)
+                    device_count = hop_data.get('total_devices', device_count)
+        except Exception:
+            pass  # Use device_count from hop_counts dict if file reading fails
+        
+        # Subtract 1 to exclude the root node (border router at hop count 0)
+        actual_device_count = max(0, device_count - 1)
+        
         if result.returncode == 0:
             return jsonify({
                 'success': True, 
                 'output': result.stdout.strip(),
-                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'device_count': actual_device_count
             })
         else:
             error_msg = result.stderr.strip() if result.stderr else "Command failed"
+            # Check for common D-Bus errors
+            if "D-Bus error" in error_msg or "NoReply" in error_msg:
+                troubleshooting = """
+Wi-SUN Border Router Service Issue Detected!
+
+Troubleshooting Steps:
+1. Check if Wi-SUN service is running: sudo systemctl status wisun-borderrouter
+2. Restart the service: sudo systemctl restart wisun-borderrouter  
+3. Check D-Bus service: sudo systemctl status dbus
+4. View service logs: sudo journalctl -u wisun-borderrouter -f
+5. Verify wsbrd_cli installation: which wsbrd_cli
+
+The service may need to be started or restarted.
+                """
+                full_error = f"{error_msg}\n{troubleshooting}"
+            else:
+                full_error = error_msg
+                
             return jsonify({
                 'success': False, 
-                'error': f'Command failed with return code {result.returncode}: {error_msg}'
+                'error': f'Command failed with return code {result.returncode}: {full_error}'
             }), 500
             
     except subprocess.TimeoutExpired:
@@ -655,6 +751,76 @@ def get_wisun_tree():
             'error': f'Error executing command: {str(e)}'
         }), 500
 
+# Hop Count API endpoints
+@app.route('/api/hop_counts/refresh', methods=['POST'])
+def refresh_hop_counts_api():
+    """Refresh hop counts by fetching from network"""
+    try:
+        success = refresh_hop_counts()
+        if success:
+            hop_counts = load_hop_counts()
+            # Subtract 1 to exclude the root node (border router)
+            actual_device_count = max(0, len(hop_counts) - 1)
+            return jsonify({
+                'success': True, 
+                'message': f'Hop counts refreshed successfully for {actual_device_count} Wi-SUN devices',
+                'total_devices': actual_device_count
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to refresh hop counts'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/hop_counts', methods=['GET'])
+def get_hop_counts_api():
+    """Get current hop counts"""
+    try:
+        hop_counts = load_hop_counts()
+        # Subtract 1 to exclude the root node (border router)
+        actual_device_count = max(0, len(hop_counts) - 1)
+        return jsonify({
+            'success': True,
+            'hop_counts': hop_counts,
+            'total_devices': actual_device_count,
+            'summary': get_hop_count_summary()
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/initialize_hop_counts', methods=['POST'])
+def initialize_hop_counts_api():
+    """Force initialize/refresh hop counts - useful for manual refresh"""
+    try:
+        print("🔄 Manual hop counts initialization requested...")
+        success = refresh_hop_counts()
+        if success:
+            hop_counts = load_hop_counts()
+            print(f"✅ Manual hop counts refresh successful for {len(hop_counts)} devices")
+            return jsonify({
+                'success': True,
+                'message': 'Hop counts refreshed successfully',
+                'total_devices': len(hop_counts),
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Failed to refresh hop counts'}), 500
+    except Exception as e:
+        print(f"❌ Error in manual hop counts refresh: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/hop_counts/<ip_address>', methods=['GET'])
+def get_hop_count_for_ip_api(ip_address):
+    """Get hop count for specific IP address"""
+    try:
+        hop_count = get_hop_count_for_ip(ip_address)
+        return jsonify({
+            'success': True,
+            'ip': ip_address,
+            'hop_count': hop_count
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @socketio.on('connect')
 def handle_connect():
     emit('connected', {'data': 'Connected to test server'})
@@ -663,5 +829,22 @@ def handle_connect():
 def handle_disconnect():
     pass
 
+def initialize_hop_counts():
+    """Initialize hop counts when application starts"""
+    print("🔄 Initializing hop counts on application startup...")
+    try:
+        success = refresh_hop_counts()
+        if success:
+            hop_counts = load_hop_counts()
+            print(f"✅ Successfully initialized hop counts for {len(hop_counts)} devices")
+        else:
+            print("⚠️ Warning: Failed to initialize hop counts on startup")
+    except Exception as e:
+        print(f"❌ Error initializing hop counts: {e}")
+
 if __name__ == '__main__':
+    # Initialize hop counts before starting the server
+    initialize_hop_counts()
+    
+    print("🚀 Starting Flask-SocketIO server...")
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)

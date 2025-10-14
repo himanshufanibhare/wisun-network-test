@@ -9,7 +9,6 @@ import re
 import time
 from tests.logger import get_logger
 from tests.ip import FAN11_FSK_IPV6
-from tests.hopCountTest import get_hop_count_for_ip
 
 timeout = 120
 packet_count = 100
@@ -180,13 +179,9 @@ def ping_all_devices(log_path=None, progress_callback=None, stop_callback=None, 
         
         # Prepare device result for frontend
         if progress_callback:
-            # Get hop count for this IP
-            hop_count = get_hop_count_for_ip(ip, stop_callback)
-            
             device_result = {
                 'ip': ip,
                 'label': device_name,
-                'hop_count': str(hop_count),
                 'packets_tx': result.get('packets_transmitted', 0),
                 'packets_rx': result.get('packets_received', 0),
                 'loss_percent': result.get('packet_loss', 100.0),
