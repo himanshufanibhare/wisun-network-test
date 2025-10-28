@@ -44,6 +44,19 @@
                                     {% endif %}
                                 </div>
                                 {% endfor %}
+
+                                <!-- Output Format Selection -->
+                                <div class="col-md-4 mb-3">
+                                    <label for="output_format" class="form-label fw-bold">
+                                        <i class="fas fa-file-export me-1"></i>Output Format
+                                    </label>
+                                    <select class="form-control-lg" id="output_format" name="output_format" required>
+                                        <option value=" txt">📄 Text File (.txt)</option>
+                                        <option value="pdf">📕 PDF Document (.pdf)</option>
+                                        <option value="word" selected>📘 Word Document (.docx)</option>
+                                    </select>
+                                    <div class="form-text">Choose the format for storing test results</div>
+                                </div>
                             </div>
                         </div>
 
@@ -51,7 +64,7 @@
                         <div class="col-md-4 mb-3">
                             <!-- First row: Start, Pause, Stop -->
                             <div class="d-flex gap-2 mb-2">
-                                <button type="submit" class="btn btn-info btn-sm flex-fill" id="startBtn">
+                                <button type="submit" class="btn btn-primary btn-sm flex-fill" id="startBtn">
                                     <i class="fas fa-play me-1"></i>Start RPL Test
                                 </button>
                                 <button type="button" class="btn btn-warning btn-sm flex-fill" id="pauseBtn" disabled>
@@ -128,6 +141,7 @@
         </div>
     </div>
 </div>
+</div>
 
 <script>
     // Wi-SUN Tree functionality
@@ -183,11 +197,11 @@
         function showNotification(message, type) {
             const alertClass = type === 'error' ? 'alert-danger' : 'alert-success';
             const notification = document.createElement('div');
-            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+            notification.className = `alert ${alertClass} alert - dismissible fade show position - fixed`;
             notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
             notification.innerHTML = `
             ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
 
             document.body.appendChild(notification);
@@ -290,8 +304,8 @@
                         <!-- Filled by JS after completion -->
                     </div>
                     <div>
-                        <button class="btn btn-outline-primary btn-sm" id="downloadLogBtn" disabled>
-                            <i class="fas fa-download me-1"></i>Download Log
+                        <button class="btn btn-primary btn-sm" id="downloadReportBtn" disabled>
+                            <i class="fas fa-download me-1"></i>Download
                         </button>
                     </div>
                 </div>

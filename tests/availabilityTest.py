@@ -81,12 +81,26 @@ def check_all_devices(log_file=None, progress_callback=None, stop_callback=None,
             
         response = check_availability(ip, timeout_val, stop_callback)
         if response:
-            status = "AVAILABLE ✅"
-            available += 1
-            connection_status = "Available"
+            # Try to extract a float/percentage from the response string
+            import re
+            percent_match = re.search(r"([0-9]+\.?[0-9]*)", response)
+            if percent_match:
+                try:
+                    availability_percent = float(percent_match.group(1))
+                except Exception:
+                    availability_percent = 100.0
+            else:
+                availability_percent = 100.0
+            status = "AVAILABLE ✅" if availability_percent > 0 else "UNAVAILABLE ❌"
+            connection_status = "Available" if availability_percent > 0 else "Unavailable"
+            if availability_percent > 0:
+                available += 1
+            else:
+                unavailable += 1
         else:
             status = "UNAVAILABLE ❌"
             response = "No response or CoAP error"
+            availability_percent = "No response or CoAP error"
             unavailable += 1
             connection_status = "Unavailable"
 
@@ -96,11 +110,17 @@ def check_all_devices(log_file=None, progress_callback=None, stop_callback=None,
 
         # Send device result to frontend
         if progress_callback:
+            # Get hop count for the device
+            from tests.hopCountUtils import get_hop_count_for_ip
+            hop_count = get_hop_count_for_ip(ip)
+
             device_result = {
                 'sr_no': current_device,
                 'ip': ip,
                 'label': device_name,
+                'hop_count': hop_count,
                 'availability': str(response) if response else '-',
+                'availability_percent': availability_percent,
                 'status': status,
                 'response_time': '-',  # Availability test doesn't measure response time
                 'link_status': connection_status,

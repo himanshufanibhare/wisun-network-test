@@ -172,10 +172,17 @@ body {
     transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
+/* .form-control-lg {
+    padding: 0.5rem 1rem;
+    font-size: 0vw.95rem;
+    border-radius: 10px;
+} */
+
 .form-control:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
+
 
 /* Footer */
 footer {

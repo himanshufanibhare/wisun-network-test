@@ -23,13 +23,9 @@ function setupEventListeners() {
     // Test form submission
     document.getElementById('testForm').addEventListener('submit', function (e) {
         e.preventDefault();
-        startTest();
+        toggleTest();
     });
 
-    // Stop button
-    document.getElementById('stopBtn').addEventListener('click', function () {
-        stopTest();
-    });
     // Pause/Resume button
     const pauseBtn = document.getElementById('pauseBtn');
     if (pauseBtn) {
@@ -139,6 +135,14 @@ function setupSocketHandlers() {
     });
 }
 
+function toggleTest() {
+    if (testRunning) {
+        stopTest();
+    } else {
+        startTest();
+    }
+}
+
 function startTest() {
     if (testRunning) {
         console.log('Test already running, ignoring start request');
@@ -164,8 +168,8 @@ function startTest() {
     };
 
     // Send start request
-    // Disable start button immediately to prevent duplicates
-    document.getElementById('startBtn').disabled = true;
+    // Disable start/stop button immediately to prevent duplicates
+    document.getElementById('startStopBtn').disabled = true;
 
     fetch('/api/start_test', {
         method: 'POST',
@@ -179,14 +183,14 @@ function startTest() {
             if (data.success) {
                 testStarted();
             } else {
-                // Re-enable start button if test failed to start
-                document.getElementById('startBtn').disabled = false;
+                // Re-enable start/stop button if test failed to start
+                document.getElementById('startStopBtn').disabled = false;
                 showError('Failed to start test: ' + data.error);
             }
         })
         .catch(error => {
-            // Re-enable start button on network error
-            document.getElementById('startBtn').disabled = false;
+            // Re-enable start/stop button on network error
+            document.getElementById('startStopBtn').disabled = false;
             showError('Network error: ' + error.message);
         });
 }
@@ -197,7 +201,9 @@ function stopTest() {
     };
 
     // Immediately update UI to show stopping state
-    document.getElementById('stopBtn').disabled = true;
+    const startStopBtn = document.getElementById('startStopBtn');
+    startStopBtn.disabled = true;
+    startStopBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Stopping...';
     testRunning = false;
 
     fetch('/api/stop_test', {
@@ -213,15 +219,17 @@ function stopTest() {
                 console.log('Test stop request sent');
                 // testStopped() will be called via socket event
             } else {
-                // Re-enable stop button if stop failed
-                document.getElementById('stopBtn').disabled = false;
+                // Re-enable button if stop failed
+                startStopBtn.disabled = false;
+                startStopBtn.innerHTML = '<i class="fas fa-stop me-1"></i>Stop Test';
                 testRunning = true;
                 showError('Failed to stop test: ' + data.error);
             }
         })
         .catch(error => {
-            // Re-enable stop button on network error
-            document.getElementById('stopBtn').disabled = false;
+            // Re-enable button on network error
+            startStopBtn.disabled = false;
+            startStopBtn.innerHTML = '<i class="fas fa-stop me-1"></i>Stop Test';
             testRunning = true;
             showError('Network error: ' + error.message);
         });
@@ -231,8 +239,12 @@ function testStarted() {
     testRunning = true;
 
     // Update UI
-    document.getElementById('startBtn').disabled = true;
-    document.getElementById('stopBtn').disabled = false;
+    const startStopBtn = document.getElementById('startStopBtn');
+    startStopBtn.disabled = false;
+    startStopBtn.innerHTML = '<i class="fas fa-stop me-1"></i>Stop Test';
+    startStopBtn.classList.remove('btn-success');
+    startStopBtn.classList.add('btn-danger');
+
     const pauseBtn = document.getElementById('pauseBtn');
     if (pauseBtn) {
         pauseBtn.disabled = false;
@@ -454,8 +466,21 @@ function testCompleted() {
     testRunning = false;
 
     // Update UI
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('stopBtn').disabled = true;
+    const startStopBtn = document.getElementById('startStopBtn');
+    startStopBtn.disabled = false;
+    startStopBtn.innerHTML = '<i class="fas fa-play me-1"></i>Start Test';
+    startStopBtn.classList.remove('btn-danger');
+    startStopBtn.classList.add('btn-success');
+
+    // Reset pause button
+    const pauseBtn = document.getElementById('pauseBtn');
+    if (pauseBtn) {
+        pauseBtn.disabled = true;
+        pauseBtn.innerHTML = '<i class="fas fa-pause me-1"></i>Pause';
+        pauseBtn.classList.remove('btn-success');
+        pauseBtn.classList.add('btn-warning');
+        pauseBtn.dataset.paused = 'false';
+    }
 
     // Hide spinner
     document.getElementById('testSpinner').classList.add('d-none');
@@ -472,12 +497,9 @@ function testCompleted() {
                 summaryEl.textContent = 'Test completed.';
             }
 
-            const btn = document.getElementById('downloadLogBtn');
+            const btn = document.getElementById('mainDownloadDropdown');
             if (btn) {
                 btn.disabled = false;
-                btn.addEventListener('click', function () {
-                    window.open(`/download_logs/${currentTestType}`, '_blank');
-                });
             }
         });
 }
@@ -486,8 +508,11 @@ function testStopped() {
     testRunning = false;
 
     // Update UI
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('stopBtn').disabled = true;
+    const startStopBtn = document.getElementById('startStopBtn');
+    startStopBtn.disabled = false;
+    startStopBtn.innerHTML = '<i class="fas fa-play me-1"></i>Start Test';
+    startStopBtn.classList.remove('btn-danger');
+    startStopBtn.classList.add('btn-success');
 
     // Reset pause button if it exists
     const pauseBtn = document.getElementById('pauseBtn');
@@ -524,7 +549,7 @@ function testStopped() {
         .then(data => {
             const summaryEl = document.getElementById('testSummary');
             if (data && data.summary) summaryEl.textContent = data.summary;
-            const btn = document.getElementById('downloadLogBtn');
+            const btn = document.getElementById('mainDownloadDropdown');
             if (btn) btn.disabled = false;
         });
 }
@@ -533,8 +558,21 @@ function testError(error) {
     testRunning = false;
 
     // Update UI
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('stopBtn').disabled = true;
+    const startStopBtn = document.getElementById('startStopBtn');
+    startStopBtn.disabled = false;
+    startStopBtn.innerHTML = '<i class="fas fa-play me-1"></i>Start Test';
+    startStopBtn.classList.remove('btn-danger');
+    startStopBtn.classList.add('btn-success');
+
+    // Reset pause button
+    const pauseBtn = document.getElementById('pauseBtn');
+    if (pauseBtn) {
+        pauseBtn.disabled = true;
+        pauseBtn.innerHTML = '<i class="fas fa-pause me-1"></i>Pause';
+        pauseBtn.classList.remove('btn-success');
+        pauseBtn.classList.add('btn-warning');
+        pauseBtn.dataset.paused = 'false';
+    }
 
     // Hide spinner
     document.getElementById('testSpinner').classList.add('d-none');
@@ -555,7 +593,7 @@ function testError(error) {
     }
 
     showError('Test error: ' + error);
-    const btn = document.getElementById('downloadLogBtn');
+    const btn = document.getElementById('mainDownloadDropdown');
     if (btn) btn.disabled = false;
 }
 
@@ -567,6 +605,13 @@ function checkTestStatus() {
         .then(data => {
             if (data.running) {
                 testStarted();
+            } else {
+                // Ensure button is in start state
+                const startStopBtn = document.getElementById('startStopBtn');
+                startStopBtn.disabled = false;
+                startStopBtn.innerHTML = '<i class="fas fa-play me-1"></i>Start Test';
+                startStopBtn.classList.remove('btn-danger');
+                startStopBtn.classList.add('btn-success');
             }
         })
         .catch(error => {
@@ -607,7 +652,31 @@ function downloadLogs() {
     window.open(`/download_logs/${currentTestType}`, '_blank');
 }
 
-// Utility functions for notifications
+// Test Result download function for different formats
+function downloadWisunTree(format) {
+    console.log('downloadTestResult called with format:', format);
+
+    // Show loading state
+    const dropdown = document.querySelector('#mainDownloadDropdown');
+    console.log('Found dropdown element:', dropdown);
+
+    if (dropdown) {
+        const originalText = dropdown.innerHTML;
+        dropdown.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Downloading...';
+        dropdown.disabled = true;
+
+        // Reset button after 3 seconds
+        setTimeout(() => {
+            dropdown.innerHTML = originalText;
+            dropdown.disabled = false;
+        }, 3000);
+    }
+
+    // Download the test result file
+    const url = `/api/test_result/download/${currentTestType}/${format}`;
+    console.log('Opening URL:', url);
+    window.open(url, '_blank');
+}// Utility functions for notifications
 function showSuccess(message) {
     showNotification(message, 'success');
 }

@@ -1,0 +1,48 @@
+Wi-SUN Network Test Report
+==================================================
+Test Type: PING
+Started: 2025-10-15 11:47:45
+==================================================
+
+Device: WN-L031-30
+IP: FD12:3456::B635:22FF:FE98:2537
+Hop Count: 1
+Status: SUCCESS
+Packets TX: 1
+Packets RX: 1
+Loss %: 0.0
+Min RTT: 388.034
+Max RTT: 388.034
+Avg RTT: 388.034
+--------------------------------------------------
+
+Device: WN-L032-30
+IP: FD12:3456::B635:22FF:FE98:2523
+Hop Count: 2
+Status: SUCCESS
+Packets TX: 1
+Packets RX: 1
+Loss %: 0.0
+Min RTT: 1850.333
+Max RTT: 1850.333
+Avg RTT: 1850.333
+--------------------------------------------------
+
+Device: WN-L033-30
+IP: FD12:3456::B635:22FF:FE98:252B
+Hop Count: -
+Status: FAILED
+Packets TX: 1
+Packets RX: 0
+Loss %: 100.0
+Min RTT: -
+Max RTT: -
+Avg RTT: -
+--------------------------------------------------
+
+
+==================================================
+TEST SUMMARY
+==================================================
+SUMMARY: 2/3 devices reachable (66.7% success rate) - Duration: 9s
+Completed: 2025-10-15 11:47:54

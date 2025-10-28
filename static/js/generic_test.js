@@ -338,11 +338,19 @@ function testCompleted() {
                 summaryEl.textContent = 'Test completed.';
             }
 
-            const btn = document.getElementById('downloadLogBtn');
-            if (btn) {
-                btn.disabled = false;
-                btn.addEventListener('click', function () {
-                    window.open(`/download_logs/${currentTestType}`, '_blank');
+            // Enable download button
+            const downloadBtn = document.getElementById('downloadReportBtn');
+            if (downloadBtn) {
+                downloadBtn.disabled = false;
+                // Remove old event listener by cloning
+                const newBtn = downloadBtn.cloneNode(true);
+                downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
+
+                newBtn.addEventListener('click', function () {
+                    // Get the selected output format from the form
+                    const outputFormat = document.querySelector('select[name="output_format"]').value;
+                    // Download the test result file
+                    window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
                 });
             }
         });

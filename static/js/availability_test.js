@@ -340,6 +340,16 @@ function updateResultsTable(deviceResult) {
         }
     }
 
+    // Determine status display with badges
+    let statusHTML;
+    if (deviceResult.status && deviceResult.status.includes('AVAILABLE ✅')) {
+        statusHTML = `<span class="badge bg-success"><i class="fas fa-check"></i> Available</span>`;
+    } else if (deviceResult.status && deviceResult.status.includes('UNAVAILABLE ❌')) {
+        statusHTML = `<span class="badge bg-danger"><i class="fas fa-times"></i> Unavailable</span>`;
+    } else {
+        statusHTML = `<span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> In Progress</span>`;
+    }
+
     // Determine if this is an unavailable device and set button accordingly
     const isUnavailable = deviceResult.status && (deviceResult.status.includes('UNAVAILABLE') || deviceResult.status === 'Failed');
     const buttonClass = isUnavailable ? 'btn-warning' : 'btn-outline-primary';
@@ -353,7 +363,7 @@ function updateResultsTable(deviceResult) {
         <td class="device-label">${deviceResult.label || '-'}</td>
         <td class="hop-count">${deviceResult.hop_count || '-'}</td>
         <td class="availability">${deviceResult.availability || '-'}</td>
-        <td class="status">${deviceResult.status || 'Unknown'}</td>
+        <td class="status">${statusHTML}</td>
         <td>
             <button class="btn ${buttonClass} btn-sm" 
                     onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')"
@@ -412,11 +422,19 @@ function testCompleted() {
                 summaryEl.textContent = 'Availability test completed.';
             }
 
-            const btn = document.getElementById('downloadLogBtn');
-            if (btn) {
-                btn.disabled = false;
-                btn.addEventListener('click', function () {
-                    window.open(`/download_logs/${currentTestType}`, '_blank');
+            // Enable download button
+            const downloadBtn = document.getElementById('downloadReportBtn');
+            if (downloadBtn) {
+                downloadBtn.disabled = false;
+                // Remove old event listener by cloning
+                const newBtn = downloadBtn.cloneNode(true);
+                downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
+
+                newBtn.addEventListener('click', function () {
+                    // Get the selected output format from the form
+                    const outputFormat = document.querySelector('select[name="output_format"]').value;
+                    // Download the test result file
+                    window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
                 });
             }
         });

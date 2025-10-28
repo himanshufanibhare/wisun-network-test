@@ -108,9 +108,6 @@ def fetch_rsl_for_all(log_file=None, progress_callback=None, stop_callback=None,
                 'label': device_name,
                 'rsl_in': str(rsl_in) if rsl_in is not None else '-',
                 'rsl_out': str(rsl_out) if rsl_out is not None else '-',
-                'signal_quality': 'Good' if rsl_in is not None and rsl_out is not None else 'Poor',
-                'response_time': '-',  # RSL test doesn't measure response time
-                'link_status': 'Connected' if rsl_in is not None else 'Disconnected',
                 'connection_status': connection_status
             }
             progress_callback(current_device, total_devices, f"Testing {device_name}", device_result)

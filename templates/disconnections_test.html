@@ -40,6 +40,20 @@
                                     {% endif %}
                                 </div>
                                 {% endfor %}
+
+                                <!-- Output Format Selection -->
+                                <div class="col-md-4 mb-3">
+                                    <label for="output_format" class="form-label fw-bold">
+                                        <i class="fas fa-file-export me-1"></i>Output Format
+                                    </label>
+                                    <select class="form-control form-control-lg" id="output_format" name="output_format"
+                                        required>
+                                        <option value="txt">📄 Text File (.txt)</option>
+                                        <option value="pdf">📕 PDF Document (.pdf)</option>
+                                        <option value="word" selected>📘 Word Document (.docx)</option>
+                                    </select>
+                                    <div class="form-text">Choose the format for storing test results</div>
+                                </div>
                             </div>
                         </div>
 
@@ -47,14 +61,13 @@
                         <div class="col-md-4 mb-3">
                             <!-- First row: Start, Pause, Stop -->
                             <div class="d-flex gap-2 mb-2">
-                                <button type="submit" class="btn btn-danger btn-sm flex-fill" id="startBtn">
+                                <button type="submit" class="btn btn-primary btn-sm flex-fill" id="startBtn">
                                     <i class="fas fa-play me-1"></i>Start Test
                                 </button>
                                 <button type="button" class="btn btn-warning btn-sm flex-fill" id="pauseBtn" disabled>
                                     <i class="fas fa-pause me-1"></i>Pause
                                 </button>
-                                <button type="button" class="btn btn-outline-danger btn-sm flex-fill" id="stopBtn"
-                                    disabled>
+                                <button type="button" class="btn btn-danger btn-sm flex-fill" id="stopBtn" disabled>
                                     <i class="fas fa-stop me-1"></i>Stop Test
                                 </button>
                             </div>
@@ -125,6 +138,7 @@
         </div>
     </div>
 </div>
+</div>
 
 <script>
     // Wi-SUN Tree functionality
@@ -174,6 +188,50 @@
                     document.getElementById('wisunTreeErrorText').textContent = 'Network error: ' + error.message;
                     document.getElementById('wisunTreeError').classList.remove('d-none');
                     refreshTreeBtn.disabled = false;
+                });
+        }
+
+        function downloadWisunTree(format) {
+            // Show loading indicator
+            const buttons = document.querySelectorAll('.modal-footer .btn-group button');
+            buttons.forEach(btn => btn.disabled = true);
+
+            // Create download link
+            const url = `/api/wisun_tree/download/${format}`;
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Download failed: ${response.statusText}`);
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    // Create download link
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+
+                    // Get filename from response headers or generate one
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                    const extensions = { txt: '.txt', pdf: '.pdf', word: '.docx' };
+                    link.download = `wisun_tree_report_${timestamp}${extensions[format] || '.txt'}`;
+
+                    // Trigger download
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(downloadUrl);
+
+                    showNotification(`Wi-SUN tree report downloaded successfully as ${format.toUpperCase()}`, 'success');
+                })
+                .catch(error => {
+                    console.error('Download error:', error);
+                    showNotification(`Failed to download ${format.toUpperCase()} report: ${error.message}`, 'error');
+                })
+                .finally(() => {
+                    // Re-enable buttons
+                    buttons.forEach(btn => btn.disabled = false);
                 });
         }
 
@@ -289,8 +347,8 @@
 <div class="d-flex justify-content-between align-items-center mt-3">
     <div id="testSummary" class="small text-muted"></div>
     <div>
-        <button class="btn btn-outline-primary btn-sm" id="downloadLogBtn" disabled>
-            <i class="fas fa-download me-1"></i>Download Log
+        <button class="btn btn-primary btn-sm" id="downloadReportBtn" disabled>
+            <i class="fas fa-download me-1"></i>Download
         </button>
     </div>
 </div>

@@ -188,7 +188,7 @@ def ping_all_devices(log_path=None, progress_callback=None, stop_callback=None, 
                 'min_time': f"{result.get('min_rtt', 0.0):.3f}" if result.get('min_rtt', 0.0) > 0 else '-',
                 'max_time': f"{result.get('max_rtt', 0.0):.3f}" if result.get('max_rtt', 0.0) > 0 else '-',
                 'avg_time': f"{result.get('avg_rtt', 0.0):.3f}" if result.get('avg_rtt', 0.0) > 0 else '-',
-                'mdev_time': f"{result.get('mdev', 0.0):.3f}" if result.get('mdev', 0.0) > 0 else '-'
+                'mdev_time': f"{result.get('mdev', 0.0):.3f}" if result.get('min_rtt', 0.0) > 0 else '-'
             }
             progress_callback(current_device, total_devices, f"Testing {device_name}", device_result)
 

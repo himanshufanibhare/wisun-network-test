@@ -353,7 +353,15 @@ function updateResultsTable(deviceResult) {
         }
     }
 
-    const statusClass = getStatusClassForRSSI(deviceResult.connection_status);
+    // Determine status display with badges
+    let statusHTML;
+    if (deviceResult.connection_status === 'Success' || deviceResult.connection_status === 'Connected') {
+        statusHTML = `<span class="badge bg-success"><i class="fas fa-check"></i> Connected</span>`;
+    } else if (deviceResult.connection_status === 'Failed' || deviceResult.connection_status === 'Error') {
+        statusHTML = `<span class="badge bg-danger"><i class="fas fa-times"></i> Failed</span>`;
+    } else {
+        statusHTML = `<span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> In Progress</span>`;
+    }
 
     // Determine if this is a failed test and set button accordingly
     const isFailedTest = deviceResult.connection_status === 'Failed' || deviceResult.connection_status === 'Error';
@@ -368,7 +376,7 @@ function updateResultsTable(deviceResult) {
         <td class="hop-count">${deviceResult.hop_count || '-'}</td>
         <td class="rsl-in">${deviceResult.rsl_in || '-'}</td>
         <td class="rsl-out">${deviceResult.rsl_out || '-'}</td>
-        <td class="connection-status ${statusClass}">${deviceResult.connection_status || 'Unknown'}</td>
+        <td class="connection-status">${statusHTML}</td>
         <td>
             <button class="btn ${buttonClass} btn-sm" 
                     onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')"
@@ -434,11 +442,19 @@ function testCompleted() {
                 summaryEl.textContent = 'RSSI test completed.';
             }
 
-            const btn = document.getElementById('downloadLogBtn');
-            if (btn) {
-                btn.disabled = false;
-                btn.addEventListener('click', function () {
-                    window.open(`/download_logs/${currentTestType}`, '_blank');
+            // Enable download button
+            const downloadBtn = document.getElementById('downloadReportBtn');
+            if (downloadBtn) {
+                downloadBtn.disabled = false;
+                // Remove old event listener by cloning
+                const newBtn = downloadBtn.cloneNode(true);
+                downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
+
+                newBtn.addEventListener('click', function () {
+                    // Get the selected output format from the form
+                    const outputFormat = document.querySelector('select[name="output_format"]').value;
+                    // Download the test result file
+                    window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
                 });
             }
         });
@@ -669,4 +685,65 @@ function showNotification(message, type) {
 // Initialize page when DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {
     console.log('RSSI test page loaded');
+
+    // Initialize Wi-SUN Tree functionality
+    initializeWisunTree();
 });
+
+function initializeWisunTree() {
+    const wisunTreeBtn = document.getElementById('wisunTreeBtn');
+    const wisunTreeModal = new bootstrap.Modal(document.getElementById('wisunTreeModal'));
+    const refreshTreeBtn = document.getElementById('refreshTreeBtn');
+
+    if (!wisunTreeBtn || !wisunTreeModal || !refreshTreeBtn) {
+        console.log('Wi-SUN tree elements not found');
+        return;
+    }
+
+    // Show modal and fetch data when button is clicked
+    wisunTreeBtn.addEventListener('click', function () {
+        console.log('Wi-SUN tree button clicked');
+        wisunTreeModal.show();
+        fetchWisunTreeData();
+    });
+
+    // Refresh data when refresh button is clicked
+    refreshTreeBtn.addEventListener('click', function () {
+        fetchWisunTreeData();
+    });
+
+    function fetchWisunTreeData() {
+        console.log('Fetching Wi-SUN tree data');
+        // Show loading state
+        document.getElementById('wisunTreeLoading').classList.remove('d-none');
+        document.getElementById('wisunTreeError').classList.add('d-none');
+        document.getElementById('wisunTreeContent').classList.add('d-none');
+        refreshTreeBtn.disabled = true;
+
+        fetch('/api/wisun_tree')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('wisunTreeLoading').classList.add('d-none');
+                refreshTreeBtn.disabled = false;
+
+                if (data.success) {
+                    // Show success content
+                    document.getElementById('wisunTreeTimestamp').textContent = data.timestamp;
+                    document.getElementById('wisunTreeDeviceCount').textContent = data.device_count || 0;
+                    document.getElementById('wisunTreeOutput').textContent = data.output;
+                    document.getElementById('wisunTreeContent').classList.remove('d-none');
+                } else {
+                    // Show error
+                    document.getElementById('wisunTreeErrorText').textContent = data.error;
+                    document.getElementById('wisunTreeError').classList.remove('d-none');
+                }
+            })
+            .catch(error => {
+                console.error('Wi-SUN tree fetch error:', error);
+                document.getElementById('wisunTreeLoading').classList.add('d-none');
+                document.getElementById('wisunTreeErrorText').textContent = 'Network error: ' + error.message;
+                document.getElementById('wisunTreeError').classList.remove('d-none');
+                refreshTreeBtn.disabled = false;
+            });
+    }
+}

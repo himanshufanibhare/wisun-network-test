@@ -118,15 +118,18 @@ def fetch_rpl_for_all(log_file=None, progress_callback=None, stop_callback=None,
 
         # Send device result to frontend
         if progress_callback:
+            # Get hop count for the device
+            from tests.hopCountUtils import get_hop_count_for_ip
+            hop_count = get_hop_count_for_ip(ip)
+            
             device_result = {
                 'sr_no': current_device,
                 'ip': ip,
                 'label': device_name,
+                'hop_count': hop_count,
                 'rpl_data': str(rpl_rank) if rpl_rank is not None else '-',
-                'status': status,
-                'response_time': '-',  # RPL test doesn't measure response time
-                'link_status': connection_status,
-                'connection_status': connection_status
+                'status': connection_status,  # Use 'status' instead of 'connection_status' for frontend
+                'connection_status': connection_status  # Keep this for report generation
             }
             progress_callback(current_device, total_devices, f"Testing {device_name}", device_result)
 

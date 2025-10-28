@@ -97,10 +97,15 @@ def check_all_devices(log_file=None, progress_callback=None, stop_callback=None,
 
         # Send device result to frontend
         if progress_callback:
+            # Get hop count for the device
+            from tests.hopCountUtils import get_hop_count_for_ip
+            hop_count = get_hop_count_for_ip(ip)
+            
             device_result = {
                 'sr_no': current_device,
                 'ip': ip,
                 'label': device_name,
+                'hop_count': hop_count,
                 'disconnected_total': str(response) if response else '-',
                 'status': status,
                 'response_time': '-',  # Disconnections test doesn't measure response time

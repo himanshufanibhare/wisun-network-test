@@ -344,13 +344,23 @@ function updateResultsTable(deviceResult) {
     const buttonIcon = isFailedTest ? 'fa-exclamation-triangle' : 'fa-redo';
 
     const deviceId = deviceResult.ip.replace(/[^a-zA-Z0-9]/g, '_');
+    // Determine status display based on connection status
+    let statusHTML;
+    if (deviceResult.status === 'Connected' || deviceResult.connection_status === 'Connected') {
+        statusHTML = `<span class="badge bg-success"><i class="fas fa-check"></i> Connected</span>`;
+    } else if (deviceResult.status === 'Disconnected' || deviceResult.connection_status === 'Disconnected') {
+        statusHTML = `<span class="badge bg-danger"><i class="fas fa-times"></i> Failed</span>`;
+    } else {
+        statusHTML = `<span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> In Progress</span>`;
+    }
+
     const rowHTML = `
         <td class="sr-no">${srNo}</td>
         <td class="ip-address">${deviceResult.ip}</td>
         <td class="device-label">${deviceResult.label || '-'}</td>
         <td class="hop-count">${deviceResult.hop_count || '-'}</td>
         <td class="rpl-rank">${deviceResult.rpl_data || '-'}</td>
-        <td class="status">${deviceResult.status || 'Unknown'}</td>
+        <td class="status">${statusHTML}</td>
         <td>
             <button class="btn ${buttonClass} btn-sm" 
                     onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')"
@@ -410,11 +420,19 @@ function testCompleted() {
                 summaryEl.textContent = data.summary;
             }
 
-            const btn = document.getElementById('downloadLogBtn');
-            if (btn) {
-                btn.disabled = false;
-                btn.addEventListener('click', function () {
-                    window.open(`/download_logs/${currentTestType}`, '_blank');
+            // Enable download button
+            const downloadBtn = document.getElementById('downloadReportBtn');
+            if (downloadBtn) {
+                downloadBtn.disabled = false;
+                // Remove old event listener by cloning
+                const newBtn = downloadBtn.cloneNode(true);
+                downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
+
+                newBtn.addEventListener('click', function () {
+                    // Get the selected output format from the form
+                    const outputFormat = document.querySelector('select[name="output_format"]').value;
+                    // Download the test result file
+                    window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
                 });
             }
         });

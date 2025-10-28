@@ -354,6 +354,18 @@ function updateResultsTable(deviceResult) {
         }
     }
 
+    // Determine status display with badges
+    let statusHTML;
+    if (deviceResult.loss_percent === 0) {
+        statusHTML = `<span class="badge bg-success"><i class="fas fa-check"></i> Connected</span>`;
+    } else if (deviceResult.loss_percent === 100) {
+        statusHTML = `<span class="badge bg-danger"><i class="fas fa-times"></i> Failed</span>`;
+    } else if (deviceResult.loss_percent > 0 && deviceResult.loss_percent < 100) {
+        statusHTML = `<span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Unstable</span>`;
+    } else {
+        statusHTML = `<span class="badge bg-secondary"><i class="fas fa-question"></i> Unknown</span>`;
+    }
+
     const rowHTML = `
         <td class="srno-column">${srNo}</td>
         <td class="ip-column">${deviceResult.ip}</td>
@@ -366,7 +378,7 @@ function updateResultsTable(deviceResult) {
         <td class="metric-column">${deviceResult.max_time || '-'}</td>
         <td class="metric-column">${deviceResult.avg_time || '-'}</td>
         <td class="metric-column">${deviceResult.mdev_time || '-'}</td>
-        <td class="${getStatusClass(deviceResult.loss_percent)}">${getStatusText(deviceResult.loss_percent)}</td>
+        <td class="status">${statusHTML}</td>
         <td class="text-center">
             <button class="btn ${buttonClass} btn-sm" 
                     onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')"
@@ -441,12 +453,63 @@ function testCompleted() {
                 summaryEl.textContent = 'Ping test completed.';
             }
 
-            const btn = document.getElementById('downloadLogBtn');
-            if (btn) {
-                btn.disabled = false;
-                btn.addEventListener('click', function () {
-                    window.open(`/download_logs/${currentTestType}`, '_blank');
+            // Enable download button
+            const downloadBtn = document.getElementById('downloadReportBtn');
+            if (downloadBtn) {
+                console.log('Found download button, enabling it...');
+                downloadBtn.disabled = false;
+                // Remove old event listener by cloning
+                const newBtn = downloadBtn.cloneNode(true);
+                downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
+
+                newBtn.addEventListener('click', function () {
+                    console.log('=== DOWNLOAD BUTTON CLICKED ===');
+
+                    // Check if output format element exists
+                    const outputFormatElement = document.querySelector('select[name="output_format"]');
+                    if (!outputFormatElement) {
+                        console.error('Output format select element not found!');
+                        alert('Error: Output format selector not found');
+                        return;
+                    }
+
+                    const outputFormat = outputFormatElement.value;
+                    console.log('Selected output format:', outputFormat);
+                    console.log('Current test type:', currentTestType);
+
+                    // Build download URL
+                    const downloadUrl = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                    console.log('Download URL:', downloadUrl);
+
+                    // Try to trigger download
+                    try {
+                        console.log('Attempting to navigate to download URL...');
+
+                        // Alternative method: create a temporary anchor element
+                        const link = document.createElement('a');
+                        link.href = downloadUrl;
+                        link.download = ''; // This suggests it's a download
+                        link.style.display = 'none';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+
+                        console.log('Download triggered successfully via anchor element');
+                    } catch (error) {
+                        console.error('Error during download:', error);
+
+                        // Fallback to window.location.href
+                        try {
+                            console.log('Falling back to window.location.href...');
+                            window.location.href = downloadUrl;
+                        } catch (fallbackError) {
+                            console.error('Fallback method also failed:', fallbackError);
+                            alert('Download failed: ' + fallbackError.message);
+                        }
+                    }
                 });
+            } else {
+                console.error('Download button not found!');
             }
         });
 }

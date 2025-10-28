@@ -1,0 +1,162 @@
+Wi-SUN Network Test Report
+==================================================
+Test Type: PING
+Started: 2025-10-15 11:47:58
+==================================================
+
+Device: WN-L031-30
+IP: FD12:3456::B635:22FF:FE98:2537
+Hop Count: 1
+Status: SUCCESS
+Packets TX: 10
+Packets RX: 10
+Loss %: 0.0
+Min RTT: 133.382
+Max RTT: 1425.843
+Avg RTT: 392.742
+--------------------------------------------------
+
+Device: WN-L032-30
+IP: FD12:3456::B635:22FF:FE98:2523
+Hop Count: 2
+Status: FAILED
+Packets TX: 10
+Packets RX: 6
+Loss %: 40.0
+Min RTT: 401.525
+Max RTT: 11403.219
+Avg RTT: 5973.091
+--------------------------------------------------
+
+Device: WN-L033-30
+IP: FD12:3456::B635:22FF:FE98:252B
+Hop Count: -
+Status: FAILED
+Packets TX: 10
+Packets RX: 0
+Loss %: 100.0
+Min RTT: -
+Max RTT: -
+Avg RTT: -
+--------------------------------------------------
+
+Device: WN-L034-30
+IP: FD12:3456::62A4:23FF:FE37:A3B3
+Hop Count: 2
+Status: FAILED
+Packets TX: 10
+Packets RX: 9
+Loss %: 10.0
+Min RTT: 5800.560
+Max RTT: 10621.961
+Avg RTT: 8852.247
+--------------------------------------------------
+
+Device: WN-L035-30
+IP: FD12:3456::B635:22FF:FE98:285B
+Hop Count: 3
+Status: FAILED
+Packets TX: 10
+Packets RX: 6
+Loss %: 40.0
+Min RTT: 1038.486
+Max RTT: 12357.580
+Avg RTT: 5462.701
+--------------------------------------------------
+
+Device: WN-L036-30
+IP: FD12:3456::62A4:23FF:FE37:A3A1
+Hop Count: -
+Status: FAILED
+Packets TX: 10
+Packets RX: 0
+Loss %: 100.0
+Min RTT: -
+Max RTT: -
+Avg RTT: -
+--------------------------------------------------
+
+Device: WN-L037-30
+IP: FD12:3456::B635:22FF:FE98:2539
+Hop Count: 4
+Status: SUCCESS
+Packets TX: 10
+Packets RX: 10
+Loss %: 0.0
+Min RTT: 813.844
+Max RTT: 10290.285
+Avg RTT: 6153.483
+--------------------------------------------------
+
+Device: WN-OF04-34
+IP: FD12:3456::B635:22FF:FE98:285C
+Hop Count: 2
+Status: FAILED
+Packets TX: 10
+Packets RX: 9
+Loss %: 10.0
+Min RTT: 269.815
+Max RTT: 1218.885
+Avg RTT: 672.203
+--------------------------------------------------
+
+Device: WN-L050-30
+IP: FD12:3456::92FD:9FFF:FEEE:9DF7
+Hop Count: 2
+Status: FAILED
+Packets TX: 10
+Packets RX: 2
+Loss %: 80.0
+Min RTT: 512.258
+Max RTT: 1516.342
+Avg RTT: 1014.300
+--------------------------------------------------
+
+Device: WN-L051-30
+IP: FD12:3456::B635:22FF:FE98:285D
+Hop Count: 2
+Status: SUCCESS
+Packets TX: 10
+Packets RX: 10
+Loss %: 0.0
+Min RTT: 3077.580
+Max RTT: 8642.254
+Avg RTT: 6202.638
+--------------------------------------------------
+
+Device: WN-L038-30
+IP: FD12:3456::B635:22FF:FE98:253F
+Hop Count: -
+Status: FAILED
+Packets TX: 10
+Packets RX: 0
+Loss %: 100.0
+Min RTT: -
+Max RTT: -
+Avg RTT: -
+--------------------------------------------------
+
+Device: WN-L039-30
+IP: FD12:3456::62A4:23FF:FE37:A3A8
+Hop Count: -
+Status: FAILED
+Packets TX: 10
+Packets RX: 0
+Loss %: 100.0
+Min RTT: -
+Max RTT: -
+Avg RTT: -
+--------------------------------------------------
+
+Device: WN-L040-30
+IP: FD12:3456::B635:22FF:FE98:2541
+Hop Count: -
+Status: FAILED
+Packets TX: 10
+Packets RX: 0
+Loss %: 100.0
+Min RTT: -
+Max RTT: -
+Avg RTT: -
+--------------------------------------------------
+

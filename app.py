@@ -12,10 +12,88 @@ import os
 import json
 import subprocess
 from datetime import datetime
+from io import BytesIO
 
 # Import test modules
 from tests import pingTest, rssiTest, rplTest, disconnectionsTest, availabilityTest
 from tests.hopCountUtils import refresh_hop_counts, load_hop_counts, get_hop_count_for_ip, get_hop_count_summary
+from utils.test_result_writer import TestResultWriter
+from utils.report_generator import (generate_txt_report, generate_pdf_report, generate_word_report, 
+                                   generate_json_report, generate_csv_report, generate_xml_report,
+                                   get_mimetype, generate_filename)
+
+def map_device_result_for_writer(device_result, test_type):
+    """Map device result fields to TestResultWriter compatible format"""
+    mapped_result = device_result.copy()
+    
+    if test_type == 'ping':
+        # Map ping-specific fields
+        if 'min_time' in device_result:
+            mapped_result['min_rtt'] = device_result['min_time']
+        if 'max_time' in device_result:
+            mapped_result['max_rtt'] = device_result['max_time']
+        if 'avg_time' in device_result:
+            mapped_result['avg_rtt'] = device_result['avg_time']
+        if 'mdev_time' in device_result:
+            mapped_result['mdev'] = device_result['mdev_time']
+        if 'label' in device_result:
+            mapped_result['device_label'] = device_result['label']
+        
+        # Set connection status based on loss percentage
+        if 'loss_percent' in device_result:
+            if device_result['loss_percent'] == 0:
+                mapped_result['connection_status'] = 'Connected'
+            elif device_result['loss_percent'] < 100:
+                mapped_result['connection_status'] = 'Unstable'
+            else:
+                mapped_result['connection_status'] = 'Failed'
+        else:
+            mapped_result['connection_status'] = 'Unknown'
+    
+    elif test_type == 'rssi' or test_type == 'rssl':
+        # Map RSSI-specific fields
+        if 'label' in device_result:
+            mapped_result['device_label'] = device_result['label']
+        if 'rsl_in' in device_result:
+            mapped_result['rsl_in'] = device_result['rsl_in']
+        if 'rsl_out' in device_result:
+            mapped_result['rsl_out'] = device_result['rsl_out']
+        if 'connection_status' in device_result:
+            mapped_result['connection_status'] = device_result['connection_status']
+        # Remove unwanted fields for RSSI tests
+        mapped_result.pop('signal_quality', None)
+        mapped_result.pop('response_time', None)
+        mapped_result.pop('link_status', None)
+    
+    elif test_type == 'rpl':
+        # Map RPL-specific fields
+        if 'label' in device_result:
+            mapped_result['device_label'] = device_result['label']
+        # Remove unwanted fields for RPL tests
+        mapped_result.pop('status', None)
+        mapped_result.pop('response_time', None)
+        mapped_result.pop('link_status', None)
+    
+    elif test_type == 'disconnections':
+        # Map disconnections-specific fields
+        if 'label' in device_result:
+            mapped_result['device_label'] = device_result['label']
+        # Keep disconnected_total field and remove unwanted fields
+        mapped_result.pop('status', None)
+        mapped_result.pop('response_time', None) 
+        mapped_result.pop('link_status', None)
+    
+    elif test_type == 'availability':
+        # Map availability-specific fields
+        if 'label' in device_result:
+            mapped_result['device_label'] = device_result['label']
+        # Remove unwanted fields for availability tests
+        mapped_result.pop('response_time', None)
+        mapped_result.pop('uptime', None)
+    
+    # Add other test type mappings as needed
+    
+    return mapped_result
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'network-test-secret-key'
@@ -134,7 +212,11 @@ def start_test():
     test_type = data.get('test_type')
     params = data.get('parameters', {})
     
+    # Extract output format
+    output_format = params.pop('output_format', 'txt')  # Remove from params and default to txt
+    
     print(f"DEBUG: Received test_type: '{test_type}'")
+    print(f"DEBUG: Output format: '{output_format}'")
     print(f"DEBUG: Available test types: {list(TEST_CONFIGS.keys())}")
     print(f"DEBUG: test_type in TEST_CONFIGS: {test_type in TEST_CONFIGS}")
     
@@ -186,7 +268,7 @@ def start_test():
     
     # Start test in background thread
     print(f"DEBUG: Starting thread for {test_type}")
-    thread = threading.Thread(target=run_test, args=(test_type, params))
+    thread = threading.Thread(target=run_test, args=(test_type, params, output_format))
     test_threads[test_type] = thread
     thread.start()
     
@@ -351,9 +433,6 @@ def run_single_device_test(test_type, ip, label, params):
                 'hop_count': hop_count,
                 'rsl_in': str(rsl_in) if rsl_in is not None else '-',
                 'rsl_out': str(rsl_out) if rsl_out is not None else '-',
-                'signal_quality': 'Good' if rsl_in is not None and rsl_out is not None else 'Poor',
-                'response_time': '-',  # RSL test doesn't measure response time
-                'link_status': 'Connected' if rsl_in is not None else 'Disconnected',
                 'connection_status': 'Success' if rsl_in is not None and rsl_out is not None else 'Failed'
             }
             
@@ -376,7 +455,7 @@ def run_single_device_test(test_type, ip, label, params):
                 'label': label,
                 'hop_count': hop_count,
                 'rpl_data': str(rpl_rank) if rpl_rank is not None else '-',
-                'status': 'Connected' if rpl_rank is not None else 'Failed'
+                'connection_status': 'Connected' if rpl_rank is not None else 'Failed'
             }
             
             # Emit result via socket
@@ -409,20 +488,34 @@ def run_single_device_test(test_type, ip, label, params):
             
         elif test_type == 'availability':
             timeout = params.get('timeout', 120)
-            
             # Import and use availability test function
             from tests.availabilityTest import check_availability
             response = check_availability(ip, timeout, None)  # No stop callback for single device retest
-            
+
+            # Parse actual availability percentage from response if possible
+            if response:
+                import re
+                percent_match = re.search(r"([0-9]+\.?[0-9]*)", response)
+                if percent_match:
+                    try:
+                        availability_percent = float(percent_match.group(1))
+                    except Exception:
+                        availability_percent = 100.0
+                else:
+                    availability_percent = 100.0
+            else:
+                availability_percent = 0.0
+
             # Format device result for frontend
             device_result = {
                 'ip': ip,
                 'label': label,
                 'hop_count': hop_count,
                 'availability': response if response is not None else 'No response',
+                'availability_percent': availability_percent,
                 'status': 'AVAILABLE ✅' if response is not None else 'UNAVAILABLE ❌'
             }
-            
+
             # Emit result via socket
             socketio.emit('device_retest_result', {
                 'test_type': test_type,
@@ -473,8 +566,33 @@ def download_logs(test_type):
     
     return "Log file not found", 404
 
-def run_test(test_type, params):
+@app.route('/api/test_result/download/<test_type>/<format>')
+def download_test_result(test_type, format):
+    """Download test result file in specified format"""
+    if test_type in test_status and 'result_file' in test_status[test_type]:
+        result_file = test_status[test_type]['result_file']
+        if os.path.exists(result_file):
+            return send_file(result_file, as_attachment=True)
+    
+    # If no result file, try to find the latest file in the reports directory
+    reports_dir = f"reports/{format}"
+    if os.path.exists(reports_dir):
+        files = [f for f in os.listdir(reports_dir) if f.startswith(f"{test_type}_test_")]
+        if files:
+            # Get the most recent file
+            latest_file = max(files, key=lambda x: os.path.getctime(os.path.join(reports_dir, x)))
+            file_path = os.path.join(reports_dir, latest_file)
+            if os.path.exists(file_path):
+                return send_file(file_path, as_attachment=True)
+    
+    return f"No {format.upper()} test result file found for {test_type}", 404
+
+def run_test(test_type, params, output_format='txt'):
     """Run the actual test in background"""
+    
+    # Initialize result writer
+    result_writer = TestResultWriter(test_type, output_format)
+    test_status[test_type]['result_file'] = result_writer.get_file_path()
     
     # Refresh hop counts before starting test
     print(f"Refreshing hop counts before {test_type} test...")
@@ -494,6 +612,15 @@ def run_test(test_type, params):
         # Add hop count to device result if available
         if device_result and 'ip' in device_result:
             device_result['hop_count'] = get_hop_count_for_ip(device_result['ip'], hop_counts)
+            
+            # Map device result fields for TestResultWriter compatibility
+            mapped_result = map_device_result_for_writer(device_result, test_type)
+            
+            # Write result to the chosen format file
+            try:
+                result_writer.append_result(mapped_result)
+            except Exception as e:
+                print(f"Warning: Failed to write result to {output_format} file: {e}")
         
         # Prepare socket data
         socket_data = {
@@ -607,6 +734,15 @@ def run_test(test_type, params):
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
             test_status[test_type]['total_run'] = total_run
+            
+        # Write summary and finalize the result file
+        if test_type in test_status and 'summary' in test_status[test_type]:
+            try:
+                result_writer.append_summary(test_status[test_type]['summary'])
+                final_file_path = result_writer.finalize()
+                print(f"Test results saved to: {final_file_path}")
+            except Exception as e:
+                print(f"Warning: Failed to finalize result file: {e}")
             
     except Exception as e:
         print(f"DEBUG: Exception in run_test for {test_type}: {str(e)}")
@@ -841,6 +977,88 @@ def initialize_hop_counts():
             print("⚠️ Warning: Failed to initialize hop counts on startup")
     except Exception as e:
         print(f"❌ Error initializing hop counts: {e}")
+
+@app.route('/api/wisun_tree/download/<format_type>', methods=['GET'])
+def download_wisun_tree(format_type):
+    """Download Wi-SUN tree report in specified format (txt, pdf, word)"""
+    try:
+        # Get fresh Wi-SUN tree data
+        result = subprocess.run(['wsbrd_cli', 'status'], 
+                              capture_output=True, 
+                              text=True, 
+                              timeout=30)
+        
+        if result.returncode != 0:
+            return jsonify({
+                'success': False, 
+                'error': 'Failed to fetch Wi-SUN tree data'
+            }), 500
+        
+        tree_output = result.stdout.strip()
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Get device count (excluding root node)
+        hop_count_data = load_hop_counts()
+        device_count = len(hop_count_data) if hop_count_data else 0
+        
+        try:
+            hop_count_file = os.path.join(os.path.dirname(__file__), 'hop_counts.json')
+            if os.path.exists(hop_count_file):
+                with open(hop_count_file, 'r') as f:
+                    hop_data = json.load(f)
+                    device_count = hop_data.get('total_devices', device_count)
+        except Exception:
+            pass
+        
+        actual_device_count = max(0, device_count - 1)
+        
+        # Generate report based on format
+        if format_type == 'txt':
+            content = generate_txt_report(tree_output, actual_device_count, timestamp)
+            file_data = content.encode('utf-8')
+        elif format_type == 'pdf':
+            file_data = generate_pdf_report(tree_output, actual_device_count, timestamp)
+        elif format_type == 'word':
+            file_data = generate_word_report(tree_output, actual_device_count, timestamp)
+        elif format_type == 'json':
+            content = generate_json_report(tree_output, actual_device_count, timestamp)
+            file_data = content.encode('utf-8')
+        elif format_type == 'csv':
+            content = generate_csv_report(tree_output, actual_device_count, timestamp)
+            file_data = content.encode('utf-8')
+        elif format_type == 'xml':
+            content = generate_xml_report(tree_output, actual_device_count, timestamp)
+            file_data = content.encode('utf-8')
+        else:
+            return jsonify({'success': False, 'error': 'Invalid format type'}), 400
+        
+        # Create file-like object
+        file_buffer = BytesIO(file_data)
+        filename = generate_filename(format_type, timestamp)
+        mimetype = get_mimetype(format_type)
+        
+        return send_file(
+            file_buffer,
+            as_attachment=True,
+            download_name=filename,
+            mimetype=mimetype
+        )
+        
+    except subprocess.TimeoutExpired:
+        return jsonify({
+            'success': False, 
+            'error': 'Wi-SUN tree command timed out'
+        }), 500
+    except ImportError as e:
+        return jsonify({
+            'success': False, 
+            'error': f'Required library not installed: {str(e)}'
+        }), 500
+    except Exception as e:
+        return jsonify({
+            'success': False, 
+            'error': f'Failed to generate report: {str(e)}'
+        }), 500
 
 if __name__ == '__main__':
     # Initialize hop counts before starting the server

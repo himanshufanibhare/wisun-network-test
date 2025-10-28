@@ -44,6 +44,20 @@
                                     {% endif %}
                                 </div>
                                 {% endfor %}
+
+                                <!-- Output Format Selection -->
+                                <div class="col-md-4 mb-3">
+                                    <label for="output_format" class="form-label fw-bold">
+                                        <i class="fas fa-file-export me-1"></i>Output Format
+                                    </label>
+                                    <select class="form-control form-control-lg" id="output_format" name="output_format"
+                                        required>
+                                        <option value="txt">📄 Text File (.txt)</option>
+                                        <option value="pdf">📕 PDF Document (.pdf)</option>
+                                        <option value="word" selected>📘 Word Document (.docx)</option>
+                                    </select>
+                                    <div class="form-text">Choose the format for storing test results</div>
+                                </div>
                             </div>
                         </div>
 
@@ -51,7 +65,7 @@
                         <div class="col-md-4 mb-3">
                             <!-- First row: Start, Pause, Stop -->
                             <div class="d-flex gap-2 mb-2">
-                                <button type="submit" class="btn btn-warning btn-sm flex-fill text-dark" id="startBtn">
+                                <button type="submit" class="btn btn-primary btn-sm flex-fill" id="startBtn">
                                     <i class="fas fa-play me-1"></i>Start RSSI Test
                                 </button>
                                 <button type="button" class="btn btn-warning btn-sm flex-fill" id="pauseBtn" disabled>
@@ -128,106 +142,7 @@
         </div>
     </div>
 </div>
-
-<script>
-    // Wi-SUN Tree functionality
-    document.addEventListener('DOMContentLoaded', function () {
-        const wisunTreeBtn = document.getElementById('wisunTreeBtn');
-        const wisunTreeModal = new bootstrap.Modal(document.getElementById('wisunTreeModal'));
-        const refreshTreeBtn = document.getElementById('refreshTreeBtn');
-
-        // Show modal and fetch data when button is clicked
-        wisunTreeBtn.addEventListener('click', function () {
-            wisunTreeModal.show();
-            fetchWisunTreeData();
-        });
-
-        // Refresh data when refresh button is clicked
-        refreshTreeBtn.addEventListener('click', function () {
-            fetchWisunTreeData();
-        });
-
-        function fetchWisunTreeData() {
-            // Show loading state
-            document.getElementById('wisunTreeLoading').classList.remove('d-none');
-            document.getElementById('wisunTreeError').classList.add('d-none');
-            document.getElementById('wisunTreeContent').classList.add('d-none');
-            refreshTreeBtn.disabled = true;
-
-            fetch('/api/wisun_tree')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('wisunTreeLoading').classList.add('d-none');
-                    refreshTreeBtn.disabled = false;
-
-                    if (data.success) {
-                        // Show success content
-                        document.getElementById('wisunTreeTimestamp').textContent = data.timestamp;
-                        document.getElementById('wisunTreeDeviceCount').textContent = data.device_count || 0;
-                        document.getElementById('wisunTreeOutput').textContent = data.output;
-                        document.getElementById('wisunTreeContent').classList.remove('d-none');
-                    } else {
-                        // Show error
-                        document.getElementById('wisunTreeErrorText').textContent = data.error;
-                        document.getElementById('wisunTreeError').classList.remove('d-none');
-                    }
-                })
-                .catch(error => {
-                    document.getElementById('wisunTreeLoading').classList.add('d-none');
-                    document.getElementById('wisunTreeErrorText').textContent = 'Network error: ' + error.message;
-                    document.getElementById('wisunTreeError').classList.remove('d-none');
-                    refreshTreeBtn.disabled = false;
-                });
-        }
-
-        function showNotification(message, type) {
-            const alertClass = type === 'error' ? 'alert-danger' : 'alert-success';
-            const notification = document.createElement('div');
-            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
-            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            notification.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-
-            document.body.appendChild(notification);
-
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 5000);
-        }
-    });
-
-    // Handle retest button clicks
-    document.addEventListener('click', function (e) {
-        if (e.target.classList.contains('retest-btn') || e.target.closest('.retest-btn')) {
-            const button = e.target.closest('.retest-btn');
-            const row = button.closest('tr');
-            const ipAddress = row.querySelector('.ip-address').textContent;
-            const deviceLabel = row.querySelector('.device-label').textContent;
-
-            retestDevice(ipAddress, deviceLabel, button);
-        }
-    });
-
-    function retestDevice(ipAddress, deviceLabel, button) {
-        // Disable button and show loading state
-        button.disabled = true;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-
-        // Here you would make an API call to retest the specific device
-        // For now, we'll simulate a retest
-        setTimeout(() => {
-            button.disabled = false;
-            button.innerHTML = '<i class="fas fa-redo"></i> Retest';
-
-            // Show notification
-            showNotification(`Retest completed for ${deviceLabel}`, 'success');
-        }, 2000);
-    }
-</script>
+</div>
 
 <!-- RSSI Test Results Table -->
 <div class="row mb-4">
@@ -290,8 +205,8 @@
                 <div class="d-flex justify-content-between align-items-center mt-3">
                     <div id="testSummary" class="small text-muted"></div>
                     <div>
-                        <button class="btn btn-outline-primary btn-sm" id="downloadLogBtn" disabled>
-                            <i class="fas fa-download me-1"></i>Download Log
+                        <button class="btn btn-primary btn-sm" id="downloadReportBtn" disabled>
+                            <i class="fas fa-download me-1"></i>Download
                         </button>
                     </div>
                 </div>
