@@ -3,6 +3,7 @@ venv/
 .venv/
 env/
 .env/
+ENV/
 
 # Python cache files
 __pycache__/
@@ -11,20 +12,106 @@ __pycache__/
 *.pyd
 .Python
 *.so
+*.py[cod]
+*$py.class
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Log files
-logs/*.log
+# Application Logs - entire logs folder
+logs/
+*.log
+
+# Generated Reports - entire reports folder
+reports/
+*.txt
+*.pdf
+*.docx
+*.csv
+*.xml
+*.json
 
 # IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
 
 # Temporary files
 *.tmp
 *.temp
+temp/
+tmp/
+
+# Flask specific
+instance/
+.webassets-cache
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Debug and test files
+debug_*.js
+debug_*.py
+test_*.py
+test_*.js
+test_*.txt
+test_*.sh
+*_test.py
+*_debug.*
+
+# Documentation drafts
+*.md.backup
+*_BACKUP.*
+*_DRAFT.*
+*.backup
+
+# Package files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Node.js (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
