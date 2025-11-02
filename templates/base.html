@@ -31,9 +31,24 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="bg-light mt-5 py-3">
-        <div class="container text-center">
-            <small class="text-muted">Wi-SUN Network Test 2025</small>
+    <footer class="bg-light mt-5 py-1">
+        <div class="container position-relative">
+            <div class="text-center">
+                <small class="text-muted">Wi-SUN Network Test 2025</small>
+            </div>
+            <div class="position-absolute bottom-0 end-0" style="right: 0; bottom: 0;">
+                <small class="text-muted developer-credit" style="font-size: 0.7rem;">
+                    <i class="fas fa-code me-1"></i>
+                    Developed by <strong>Himanshu Fanibhare</strong>
+                </small>
+                <a href="https://himanshu-portfolio-beryl.vercel.app/" 
+                   target="_blank" 
+                   class="btn btn-outline-secondary btn-xs ms-1"
+                   style="font-size: 0.65rem; padding: 0.2rem 0.4rem;"
+                   title="Visit Developer Portfolio">
+                    <i class="fas fa-user" style="font-size: 0.65rem;"></i>
+                </a>
+            </div>
         </div>
     </footer>
 

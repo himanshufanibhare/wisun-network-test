@@ -27,31 +27,69 @@ def check_disconnected_total(ip, timeout=120, stop_callback=None):
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         response = ''
         
-        # Loop and periodically check stop_callback
-        while True:
+        # For single device retest (no stop_callback), use direct communicate with timeout
+        if stop_callback is None:
             try:
-                out, err = proc.communicate(timeout=1)
-                response += out or ''
-                break
-            except subprocess.TimeoutExpired:
-                # CoAP command still running; check stop flag
-                if stop_callback and stop_callback():
-                    # terminate process and return None
-                    try:
-                        proc.terminate()
-                        proc.communicate(timeout=2)
-                    except Exception:
-                        try:
-                            proc.kill()
-                        except Exception:
-                            pass
+                out, err = proc.communicate(timeout=timeout)
+                response = out or ''
+                
+                # Treat empty response or error messages as failed
+                if proc.returncode != 0 or not response or "ERR" in response.upper():
                     return None
-                # otherwise continue waiting
+                return response
+            except subprocess.TimeoutExpired:
+                # Command timed out, kill the process
+                try:
+                    proc.terminate()
+                    proc.communicate(timeout=2)
+                except Exception:
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
+                return None
+        else:
+            # For full test with stop_callback, use the periodic check loop
+            import time
+            start_time = time.time()
+            
+            while True:
+                try:
+                    out, err = proc.communicate(timeout=1)
+                    response += out or ''
+                    break
+                except subprocess.TimeoutExpired:
+                    # Check if overall timeout exceeded
+                    if time.time() - start_time > timeout:
+                        # Overall timeout exceeded, kill process
+                        try:
+                            proc.terminate()
+                            proc.communicate(timeout=2)
+                        except Exception:
+                            try:
+                                proc.kill()
+                            except Exception:
+                                pass
+                        return None
+                    
+                    # CoAP command still running; check stop flag
+                    if stop_callback and stop_callback():
+                        # terminate process and return None
+                        try:
+                            proc.terminate()
+                            proc.communicate(timeout=2)
+                        except Exception:
+                            try:
+                                proc.kill()
+                            except Exception:
+                                pass
+                        return None
+                    # otherwise continue waiting
 
-        # Treat empty response or error messages as failed
-        if proc.returncode != 0 or not response or "ERR" in response.upper():
-            return None
-        return response
+            # Treat empty response or error messages as failed
+            if proc.returncode != 0 or not response or "ERR" in response.upper():
+                return None
+            return response
     except Exception:
         return None
 

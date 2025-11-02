@@ -430,13 +430,25 @@ function testCompleted() {
     document.getElementById('stopBtn').disabled = true;
     document.getElementById('testSpinner').classList.add('d-none');
 
+    // Enable all retest buttons
+    const retestButtons = document.querySelectorAll('#resultsTableBody button[id^="retest_"]');
+    retestButtons.forEach(button => {
+        button.disabled = false;
+    });
+
     showSuccess('RSSI test completed successfully!');
 
     fetch(`/api/test_status/${currentTestType}`)
         .then(res => res.json())
         .then(data => {
             const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary) {
+            
+            // Use locally calculated summary if we have table data, otherwise use backend summary
+            const hasTableData = document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0;
+            if (hasTableData) {
+                console.log('Using locally calculated RSSI summary instead of backend summary');
+                updateSummaryFromTable(); // Update with current table data
+            } else if (data && data.summary) {
                 summaryEl.textContent = data.summary;
             } else {
                 summaryEl.textContent = 'RSSI test completed.';
@@ -453,8 +465,18 @@ function testCompleted() {
                 newBtn.addEventListener('click', function () {
                     // Get the selected output format from the form
                     const outputFormat = document.querySelector('select[name="output_format"]').value;
-                    // Download the test result file
-                    window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                    
+                    // First regenerate the report with latest table data, then download
+                    regenerateReportWithUpdatedResults()
+                        .then(() => {
+                            // After regeneration is complete, trigger download
+                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                        })
+                        .catch(error => {
+                            console.error('Failed to regenerate report before download:', error);
+                            // Still try to download the existing file
+                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                        });
                 });
             }
         });
@@ -496,7 +518,16 @@ function testStopped() {
         .then(res => res.json())
         .then(data => {
             const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary) summaryEl.textContent = data.summary;
+            
+            // Use locally calculated summary if we have table data, otherwise use backend summary
+            const hasTableData = document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0;
+            if (hasTableData) {
+                console.log('Using locally calculated RSSI summary for stopped test');
+                updateSummaryFromTable(); // Update with current table data
+            } else if (data && data.summary) {
+                summaryEl.textContent = data.summary;
+            }
+            
             const btn = document.getElementById('downloadLogBtn');
             if (btn) btn.disabled = false;
         });
@@ -599,8 +630,14 @@ function resetRetestButton(deviceId, ip, label) {
 function updateDeviceInTable(deviceResult) {
     updateResultsTable(deviceResult);
     showSuccess(`RSSI retest completed for ${deviceResult.label}`);
-    // Update summary after retest
-    updateSummaryFromTable();
+    
+    // Update summary after retest with a small delay to ensure DOM is updated
+    setTimeout(() => {
+        updateSummaryFromTable();
+    }, 100);
+    
+    // Trigger report regeneration with updated results
+    regenerateReportWithUpdatedResults();
 }
 
 // Update summary based on current table data
@@ -610,22 +647,34 @@ function updateSummaryFromTable() {
     let totalCount = rows.length;
 
     rows.forEach(row => {
-        // Find Connection Status column (should be the one with "Success" or "Failed")
         const cells = row.cells;
-        let connectionStatusText = '';
-
-        // Look for the cell that contains Success/Failed text
-        for (let i = 0; i < cells.length; i++) {
-            const cellText = cells[i].textContent.trim();
-            if (cellText === 'Success' || cellText === 'Failed' || cellText === 'Error') {
-                connectionStatusText = cellText;
-                break;
+        
+        // Check the Connection Status column (6th column, index 6)
+        if (cells.length > 6) {
+            const statusCell = cells[6]; // Connection Status column
+            let isConnected = false;
+            
+            // Check if the status cell contains a success badge
+            const badge = statusCell.querySelector('.badge');
+            if (badge) {
+                const badgeText = badge.textContent.trim();
+                const badgeClasses = badge.className;
+                
+                // Check both text content and CSS classes for reliability
+                if (badgeText.includes('Connected') || badgeClasses.includes('bg-success')) {
+                    isConnected = true;
+                }
+            } else {
+                // Fallback: check cell text content
+                const cellText = statusCell.textContent.trim();
+                if (cellText.includes('Connected') || cellText.includes('Success')) {
+                    isConnected = true;
+                }
             }
-        }
-
-        // Consider success if status is "Success"
-        if (connectionStatusText === 'Success') {
-            successCount++;
+            
+            if (isConnected) {
+                successCount++;
+            }
         }
     });
 
@@ -680,6 +729,96 @@ function showNotification(message, type) {
             notification.parentNode.removeChild(notification);
         }
     }, 5000);
+}
+
+// Regenerate report files with updated test results
+function regenerateReportWithUpdatedResults() {
+    const outputFormat = document.querySelector('select[name="output_format"]').value;
+    
+    // Get current test results from table
+    const tableResults = getCurrentTableResults();
+    
+    // Send to backend to regenerate report
+    return fetch('/api/regenerate_report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            test_type: currentTestType,
+            output_format: outputFormat,
+            results: tableResults,
+            summary: document.getElementById('testSummary').textContent
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('RSSI report regenerated successfully');
+            return data;
+        } else {
+            console.error('Failed to regenerate RSSI report:', data.error);
+            throw new Error(data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error regenerating RSSI report:', error);
+        throw error;
+    });
+}
+
+// Extract current results from the table
+function getCurrentTableResults() {
+    const rows = document.querySelectorAll('#resultsTableBody tr[data-device-ip]');
+    const results = [];
+    
+    rows.forEach(row => {
+        const cells = row.cells;
+        
+        // Extract connection status from the Connection Status column (index 6)
+        let connectionStatus = 'Unknown';
+        let status = 'Failed';
+        
+        if (cells.length > 6) {
+            const statusCell = cells[6]; // Connection Status column
+            
+            // Check if the status cell contains a badge
+            const badge = statusCell.querySelector('.badge');
+            if (badge) {
+                const badgeText = badge.textContent.trim();
+                if (badgeText.includes('Connected')) {
+                    connectionStatus = 'Connected';
+                    status = 'Success';
+                } else if (badgeText.includes('Failed')) {
+                    connectionStatus = 'Disconnected';
+                    status = 'Failed';
+                }
+            } else {
+                // Fallback: check full cell text content
+                const cellText = statusCell.textContent.trim();
+                if (cellText.includes('Connected') || cellText.includes('Success')) {
+                    connectionStatus = 'Connected';
+                    status = 'Success';
+                } else if (cellText.includes('Failed') || cellText.includes('Error')) {
+                    connectionStatus = 'Disconnected';
+                    status = 'Failed';
+                }
+            }
+        }
+        
+        results.push({
+            sr_no: parseInt(cells[0].textContent) || 0,
+            ip: cells[1].textContent,
+            device_label: cells[2].textContent, // Use device_label to match backend expectations
+            hop_count: cells[3] ? cells[3].textContent : 'N/A',
+            rsl_in: cells[4] ? cells[4].textContent : 'N/A',
+            rsl_out: cells[5] ? cells[5].textContent : 'N/A',
+            status: status,
+            connection_status: connectionStatus
+        });
+    });
+    
+    return results;
 }
 
 // Initialize page when DOM is loaded

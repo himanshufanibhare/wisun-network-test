@@ -78,8 +78,22 @@ def map_device_result_for_writer(device_result, test_type):
         # Map disconnections-specific fields
         if 'label' in device_result:
             mapped_result['device_label'] = device_result['label']
+        
+        # Map connection status based on status field
+        if 'status' in device_result:
+            if 'RESPONSE ✅' in device_result['status']:
+                mapped_result['connection_status'] = 'Connected'
+            elif 'NO RESPONSE ❌' in device_result['status']:
+                mapped_result['connection_status'] = 'Disconnected'
+            else:
+                mapped_result['connection_status'] = 'Unknown'
+        elif 'connection_status' in device_result:
+            # Use existing connection_status if available
+            mapped_result['connection_status'] = device_result['connection_status']
+        else:
+            mapped_result['connection_status'] = 'Unknown'
+            
         # Keep disconnected_total field and remove unwanted fields
-        mapped_result.pop('status', None)
         mapped_result.pop('response_time', None) 
         mapped_result.pop('link_status', None)
     
@@ -467,9 +481,13 @@ def run_single_device_test(test_type, ip, label, params):
         elif test_type == 'disconnections':
             timeout = params.get('timeout', 120)
             
+            print(f"DEBUG: Starting single device disconnections test for {ip} ({label}) with timeout {timeout}s")
+            
             # Import and use disconnections test function
             from tests.disconnectionsTest import check_disconnected_total
             response = check_disconnected_total(ip, timeout, None)  # No stop callback for single device retest
+            
+            print(f"DEBUG: Disconnections test completed for {ip}. Response: {response is not None}")
             
             # Format device result for frontend
             device_result = {
@@ -477,8 +495,11 @@ def run_single_device_test(test_type, ip, label, params):
                 'label': label,
                 'hop_count': hop_count,
                 'disconnected_total': response if response is not None else 'No response',
-                'status': 'RESPONSE ✅' if response is not None else 'NO RESPONSE ❌'
+                'status': 'RESPONSE ✅' if response is not None else 'NO RESPONSE ❌',
+                'connection_status': 'Connected' if response is not None else 'Disconnected'
             }
+            
+            print(f"DEBUG: Emitting device_retest_result for {ip}")
             
             # Emit result via socket
             socketio.emit('device_retest_result', {
@@ -523,6 +544,10 @@ def run_single_device_test(test_type, ip, label, params):
             })
             
     except Exception as e:
+        print(f"DEBUG: Exception in run_single_device_test for {test_type} ({ip}): {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
         socketio.emit('device_retest_error', {
             'test_type': test_type,
             'ip': ip,
@@ -566,26 +591,101 @@ def download_logs(test_type):
     
     return "Log file not found", 404
 
+@app.route('/api/regenerate_report', methods=['POST'])
+def regenerate_report():
+    """Regenerate report file with updated test results"""
+    data = request.get_json()
+    test_type = data.get('test_type')
+    output_format = data.get('output_format', 'txt')
+    results = data.get('results', [])
+    summary = data.get('summary', '')
+    
+    if not test_type or test_type not in TEST_CONFIGS:
+        return jsonify({'error': 'Invalid test type'}), 400
+    
+    try:
+        # Initialize result writer for the report
+        result_writer = TestResultWriter(test_type, output_format)
+        
+        # Clear existing content and write updated results
+        result_writer.clear_file()
+        
+        # Write header information
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        result_writer.write_header({
+            'test_name': TEST_CONFIGS[test_type]['name'],
+            'timestamp': timestamp,
+            'total_devices': len(results)
+        })
+        
+        # Write each result
+        for result in results:
+            mapped_result = map_device_result_for_writer(result, test_type)
+            result_writer.append_result(mapped_result)
+        
+        # Write summary
+        result_writer.write_summary(summary)
+        
+        # Add Wi-SUN tree if available
+        try:
+            from tests.hopCountTest import get_wisun_tree
+            print(f"DEBUG: Attempting to get Wi-SUN tree for regenerated report")
+            tree_output = get_wisun_tree()
+            if tree_output and tree_output.strip():
+                print(f"DEBUG: Adding Wi-SUN tree to regenerated report (length: {len(tree_output)})")
+                result_writer.add_wisun_tree(tree_output, timestamp)
+            else:
+                print(f"DEBUG: No Wi-SUN tree output received for regenerated report")
+        except Exception as e:
+            print(f"Warning: Failed to add Wi-SUN tree to report: {e}")
+        
+        # Finalize the file
+        result_writer.finalize()
+        
+        # Update test status with new result file
+        if test_type in test_status:
+            test_status[test_type]['result_file'] = result_writer.get_file_path()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Report regenerated successfully in {output_format.upper()} format',
+            'file_path': result_writer.get_file_path()
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to regenerate report: {str(e)}'}), 500
+
 @app.route('/api/test_result/download/<test_type>/<format>')
 def download_test_result(test_type, format):
-    """Download test result file in specified format"""
-    if test_type in test_status and 'result_file' in test_status[test_type]:
-        result_file = test_status[test_type]['result_file']
-        if os.path.exists(result_file):
-            return send_file(result_file, as_attachment=True)
-    
-    # If no result file, try to find the latest file in the reports directory
-    reports_dir = f"reports/{format}"
-    if os.path.exists(reports_dir):
-        files = [f for f in os.listdir(reports_dir) if f.startswith(f"{test_type}_test_")]
-        if files:
-            # Get the most recent file
-            latest_file = max(files, key=lambda x: os.path.getctime(os.path.join(reports_dir, x)))
-            file_path = os.path.join(reports_dir, latest_file)
-            if os.path.exists(file_path):
-                return send_file(file_path, as_attachment=True)
-    
-    return f"No {format.upper()} test result file found for {test_type}", 404
+    """Download test result file in specified format - always serves the most up-to-date version"""
+    try:
+        # First check if we have a current result file
+        if test_type in test_status and 'result_file' in test_status[test_type]:
+            result_file = test_status[test_type]['result_file']
+            if os.path.exists(result_file):
+                # Check if the file format matches what's requested
+                if result_file.endswith(f'.{format}') or (format == 'word' and result_file.endswith('.docx')):
+                    print(f"DEBUG: Serving existing up-to-date file: {result_file}")
+                    return send_file(result_file, as_attachment=True)
+        
+        # If no matching file found, try to find the latest file in the reports directory
+        reports_dir = f"reports/{format}"
+        if os.path.exists(reports_dir):
+            files = [f for f in os.listdir(reports_dir) if f.startswith(f"{test_type}_test_")]
+            if files:
+                # Get the most recent file
+                latest_file = max(files, key=lambda x: os.path.getctime(os.path.join(reports_dir, x)))
+                file_path = os.path.join(reports_dir, latest_file)
+                if os.path.exists(file_path):
+                    print(f"DEBUG: Serving latest file from directory: {file_path}")
+                    return send_file(file_path, as_attachment=True)
+        
+        print(f"DEBUG: No report file found for {test_type} in {format} format")
+        return f"No {format.upper()} test result file found for {test_type}", 404
+        
+    except Exception as e:
+        print(f"ERROR: Failed to download test result: {str(e)}")
+        return f"Error downloading {format.upper()} report: {str(e)}", 500
 
 def run_test(test_type, params, output_format='txt'):
     """Run the actual test in background"""
@@ -738,7 +838,22 @@ def run_test(test_type, params, output_format='txt'):
         # Write summary and finalize the result file
         if test_type in test_status and 'summary' in test_status[test_type]:
             try:
-                result_writer.append_summary(test_status[test_type]['summary'])
+                result_writer.write_summary(test_status[test_type]['summary'])
+                
+                # Add Wi-SUN tree to the report
+                try:
+                    from tests.hopCountTest import get_wisun_tree
+                    print(f"DEBUG: Attempting to get Wi-SUN tree for {test_type}")
+                    tree_output = get_wisun_tree()
+                    if tree_output and tree_output.strip():
+                        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        print(f"DEBUG: Adding Wi-SUN tree to report (length: {len(tree_output)})")
+                        result_writer.add_wisun_tree(tree_output, timestamp)
+                    else:
+                        print(f"DEBUG: No Wi-SUN tree output received")
+                except Exception as e:
+                    print(f"Warning: Failed to add Wi-SUN tree to report: {e}")
+                
                 final_file_path = result_writer.finalize()
                 print(f"Test results saved to: {final_file_path}")
             except Exception as e:

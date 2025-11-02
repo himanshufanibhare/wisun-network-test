@@ -349,8 +349,18 @@ function testCompleted() {
                 newBtn.addEventListener('click', function () {
                     // Get the selected output format from the form
                     const outputFormat = document.querySelector('select[name="output_format"]').value;
-                    // Download the test result file
-                    window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                    
+                    // First regenerate the report with latest table data, then download
+                    regenerateReportWithUpdatedResults()
+                        .then(() => {
+                            // After regeneration is complete, trigger download
+                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                        })
+                        .catch(error => {
+                            console.error('Failed to regenerate report before download:', error);
+                            // Still try to download the existing file
+                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                        });
                 });
             }
         });
@@ -473,6 +483,62 @@ function showNotification(message, type) {
             notification.parentNode.removeChild(notification);
         }
     }, 5000);
+}
+
+// Regenerate report files with updated test results
+function regenerateReportWithUpdatedResults() {
+    const outputFormat = document.querySelector('select[name="output_format"]').value;
+    
+    // Get current test results from table
+    const tableResults = getCurrentTableResults();
+    
+    // Send to backend to regenerate report
+    return fetch('/api/regenerate_report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            test_type: currentTestType,
+            output_format: outputFormat,
+            results: tableResults,
+            summary: document.getElementById('testSummary').textContent
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Generic report regenerated successfully');
+            return data;
+        } else {
+            console.error('Failed to regenerate generic report:', data.error);
+            throw new Error(data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error regenerating generic report:', error);
+        throw error;
+    });
+}
+
+// Extract current results from the table (basic implementation)
+function getCurrentTableResults() {
+    const rows = document.querySelectorAll('#resultsTableBody tr[data-device-ip]');
+    const results = [];
+    
+    rows.forEach(row => {
+        const cells = row.cells;
+        
+        // Basic extraction - adapt based on actual table structure
+        results.push({
+            sr_no: parseInt(cells[0].textContent) || 0,
+            ip: cells[1].textContent,
+            device_label: cells[2] ? cells[2].textContent : cells[1].textContent, // Use device_label to match backend expectations
+            status: 'Success' // Default - this should be adapted based on actual data
+        });
+    });
+    
+    return results;
 }
 
 // Initialize page when DOM is loaded

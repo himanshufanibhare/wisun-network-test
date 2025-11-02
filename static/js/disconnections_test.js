@@ -367,8 +367,8 @@ function updateResultsTable(deviceResult) {
                                     ${statusHTML}
                                 </td>
                                 <td class="retest">
-                                    <button class="btn btn-sm btn-outline-primary" onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')" disabled>
-                                        <i class="fas fa-redo"></i> Retest
+                                    <button class="btn btn-sm ${buttonClass}" id="retest_${deviceId}" onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')">
+                                        <i class="fas ${buttonIcon}"></i> ${buttonText}
                                     </button>
                                 </td>
                         `; if (existingRow) {
@@ -408,6 +408,12 @@ function testCompleted() {
     document.getElementById('stopBtn').disabled = true;
     document.getElementById('testSpinner').classList.add('d-none');
 
+    // Enable all retest buttons
+    const retestButtons = document.querySelectorAll('#resultsTableBody button[id^="retest_"]');
+    retestButtons.forEach(button => {
+        button.disabled = false;
+    });
+
     showSuccess('Disconnections test completed successfully!');
 
     fetch(`/api/test_status/${currentTestType}`)
@@ -431,8 +437,18 @@ function testCompleted() {
                 newBtn.addEventListener('click', function () {
                     // Get the selected output format from the form
                     const outputFormat = document.querySelector('select[name="output_format"]').value;
-                    // Download the test result file
-                    window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                    
+                    // First regenerate the report with latest table data, then download
+                    regenerateReportWithUpdatedResults()
+                        .then(() => {
+                            // After regeneration is complete, trigger download
+                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                        })
+                        .catch(error => {
+                            console.error('Failed to regenerate report before download:', error);
+                            // Still try to download the existing file
+                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                        });
                 });
             }
         });
@@ -547,6 +563,13 @@ function retestDevice(ip, label, deviceId) {
         button.className = 'btn btn-info btn-sm';
     }
 
+    // Set a safety timeout to reset button if no response after 3 minutes
+    const safetyTimeout = setTimeout(() => {
+        console.log(`Safety timeout triggered for device ${ip}`);
+        showWarning(`Retest timeout for ${label} - resetting button`);
+        resetRetestButton(deviceId, ip, label);
+    }, 180000); // 3 minutes
+
     fetch('/api/retest_device', {
         method: 'POST',
         headers: {
@@ -563,12 +586,18 @@ function retestDevice(ip, label, deviceId) {
         .then(data => {
             if (data.success) {
                 showInfo(`Disconnections retest started for ${label}`);
+                // Store the timeout ID so we can clear it when the result comes back
+                if (button) {
+                    button.dataset.safetyTimeout = safetyTimeout;
+                }
             } else {
+                clearTimeout(safetyTimeout);
                 showError(`Failed to start disconnections retest: ${data.error}`);
                 resetRetestButton(deviceId, ip, label);
             }
         })
         .catch(error => {
+            clearTimeout(safetyTimeout);
             showError(`Network error: ${error.message}`);
             resetRetestButton(deviceId, ip, label);
         });
@@ -584,10 +613,21 @@ function resetRetestButton(deviceId, ip, label) {
 }
 
 function updateDeviceInTable(deviceResult) {
+    // Clear safety timeout if it exists
+    const deviceId = deviceResult.ip.replace(/[^a-zA-Z0-9]/g, '_');
+    const button = document.getElementById(`retest_${deviceId}`);
+    if (button && button.dataset.safetyTimeout) {
+        clearTimeout(parseInt(button.dataset.safetyTimeout));
+        delete button.dataset.safetyTimeout;
+    }
+    
     updateResultsTable(deviceResult);
     showSuccess(`Disconnections retest completed for ${deviceResult.label}`);
     // Update summary after retest
     updateSummaryFromTable();
+    
+    // Trigger report regeneration with updated results
+    regenerateReportWithUpdatedResults();
 }
 
 // Update summary based on current table data
@@ -628,6 +668,92 @@ function updateSummaryFromTable() {
             summaryEl.textContent = `SUMMARY: ${successCount}/${totalCount} devices stable (${successRate}% success rate)${durationStr}`;
         }
     }
+}
+
+// Regenerate report files with updated test results
+function regenerateReportWithUpdatedResults() {
+    const outputFormat = document.querySelector('select[name="output_format"]').value;
+    
+    // Get current test results from table
+    const tableResults = getCurrentTableResults();
+    
+    // Send to backend to regenerate report
+    return fetch('/api/regenerate_report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            test_type: currentTestType,
+            output_format: outputFormat,
+            results: tableResults,
+            summary: document.getElementById('testSummary').textContent
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Report regenerated successfully');
+            return data;
+        } else {
+            console.error('Failed to regenerate report:', data.error);
+            throw new Error(data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error regenerating report:', error);
+        throw error;
+    });
+}
+
+// Extract current results from the table
+function getCurrentTableResults() {
+    const rows = document.querySelectorAll('#resultsTableBody tr[data-device-ip]');
+    const results = [];
+    
+    rows.forEach(row => {
+        const cells = row.cells;
+        
+        // Extract connection status from the status cell (cell 5)
+        const statusCell = cells[5];
+        let connectionStatus = 'Unknown';
+        let status = 'NO RESPONSE ❌';
+        
+        // Check the badge content in the status cell
+        const badge = statusCell.querySelector('.badge');
+        if (badge) {
+            const badgeText = badge.textContent.trim();
+            if (badgeText.includes('Connected')) {
+                connectionStatus = 'Connected';
+                status = 'RESPONSE ✅';
+            } else if (badgeText.includes('Disconnected')) {
+                connectionStatus = 'Disconnected';
+                status = 'NO RESPONSE ❌';
+            }
+        } else {
+            // Fallback: check full cell text content
+            const cellText = statusCell.textContent.trim();
+            if (cellText.includes('Connected') || cellText.includes('RESPONSE ✅')) {
+                connectionStatus = 'Connected';
+                status = 'RESPONSE ✅';
+            } else if (cellText.includes('Disconnected') || cellText.includes('NO RESPONSE ❌')) {
+                connectionStatus = 'Disconnected';
+                status = 'NO RESPONSE ❌';
+            }
+        }
+        
+        results.push({
+            sr_no: parseInt(cells[0].textContent) || 0,
+            ip: cells[1].textContent,
+            device_label: cells[2].textContent, // Use device_label to match backend expectations
+            hop_count: cells[3].textContent,
+            disconnected_total: cells[4].textContent,
+            status: status,
+            connection_status: connectionStatus
+        });
+    });
+    
+    return results;
 }// Utility functions for notifications
 function showSuccess(message) {
     showNotification(message, 'success');

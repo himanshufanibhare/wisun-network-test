@@ -296,6 +296,56 @@ footer {
     font-size: 0.8em;
 }
 
+/* Output format styling - reduce text size and make less prominent */
+label[for="output_format"] {
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    color: #6c757d;
+}
+
+label[for="output_format"] i {
+    font-size: 0.9rem;
+}
+
+select#output_format {
+    font-size: 0.95rem !important;
+    padding: 0.5rem 0.75rem !important;
+    height: auto !important;
+}
+
+select#output_format option {
+    font-size: 0.95rem;
+}
+
+/* Download button styling - make more compact */
+#downloadReportBtn {
+    font-size: 0.9rem !important;
+    padding: 0.4rem 0.8rem !important;
+    font-weight: 500;
+}
+
+#downloadReportBtn i {
+    font-size: 0.75rem;
+}
+
+/* Parameter input fields styling - make consistent with output format */
+form#testForm .form-label.fw-bold {
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+    color: #6c757d;
+}
+
+form#testForm .form-control.form-control-lg {
+    font-size: 0.95rem !important;
+    padding: 0.5rem 0.75rem !important;
+    height: auto !important;
+}
+
+form#testForm .form-text {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
 /* Compact card body for results table */
 .card .card-body:has(#resultsTable) {
     padding: 0.75rem;
@@ -323,4 +373,95 @@ footer {
 #resultsTable tbody tr:hover {
     background-color: rgba(13, 110, 253, 0.1);
     cursor: pointer;
+}
+
+/* Footer Styles */
+footer {
+    border-top: 1px solid #dee2e6;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    position: relative;
+    min-height: 30px;
+}
+
+footer .container {
+    position: relative;
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Developer credit styling - positioned in corner */
+footer small {
+    font-size: 0.875rem;
+}
+
+footer .developer-credit {
+    opacity: 0.7;
+    font-size: 0.75rem !important;
+    white-space: nowrap;
+}
+
+footer .developer-credit strong {
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+/* Position developer credit in bottom-right corner */
+footer .position-absolute {
+    position: absolute !important;
+    bottom: 0.1rem !important;
+    right: 0.25rem !important;
+}
+
+/* Portfolio button styling - made more visible and highlighted */
+.btn-outline-secondary.btn-xs {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    box-shadow: 0 2px 6px rgba(13, 110, 253, 0.2);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.05));
+    font-weight: 500;
+}
+
+.btn-outline-secondary.btn-xs:hover {
+    background: linear-gradient(135deg, var(--primary-color), #0056b3);
+    border-color: var(--primary-color);
+    color: white;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
+}
+
+.btn-outline-secondary.btn-xs:active {
+    transform: translateY(0) scale(1.02);
+}
+
+/* Responsive footer adjustments */
+@media (max-width: 768px) {
+    footer {
+        min-height: 35px;
+    }
+    
+    footer .container {
+        min-height: 35px;
+    }
+    
+    footer .position-absolute {
+        position: absolute !important;
+        bottom: 0.05rem !important;
+        right: 0.15rem !important;
+    }
+    
+    footer .developer-credit {
+        font-size: 0.6rem !important;
+    }
+    
+    .btn-outline-secondary.btn-xs {
+        padding: 0.15rem 0.3rem;
+        font-size: 0.6rem;
+    }
 }

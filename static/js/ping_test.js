@@ -441,6 +441,12 @@ function testCompleted() {
     document.getElementById('stopBtn').disabled = true;
     document.getElementById('testSpinner').classList.add('d-none');
 
+    // Enable all retest buttons
+    const retestButtons = document.querySelectorAll('#resultsTableBody button[id^="retest_"]');
+    retestButtons.forEach(button => {
+        button.disabled = false;
+    });
+
     showSuccess('Ping test completed successfully!');
 
     fetch(`/api/test_status/${currentTestType}`)
@@ -473,40 +479,44 @@ function testCompleted() {
                         return;
                     }
 
+                    // Get selected output format and regenerate report before download
                     const outputFormat = outputFormatElement.value;
                     console.log('Selected output format:', outputFormat);
                     console.log('Current test type:', currentTestType);
 
-                    // Build download URL
-                    const downloadUrl = `/api/test_result/download/${currentTestType}/${outputFormat}`;
-                    console.log('Download URL:', downloadUrl);
+                    // First regenerate the report with latest table data, then download
+                    regenerateReportWithUpdatedResults()
+                        .then(() => {
+                            // Build download URL after regeneration
+                            const downloadUrl = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                            console.log('Download URL:', downloadUrl);
 
-                    // Try to trigger download
-                    try {
-                        console.log('Attempting to navigate to download URL...');
+                            // Try to trigger download
+                            try {
+                                console.log('Attempting to download regenerated report...');
 
-                        // Alternative method: create a temporary anchor element
-                        const link = document.createElement('a');
-                        link.href = downloadUrl;
-                        link.download = ''; // This suggests it's a download
-                        link.style.display = 'none';
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
+                                // Create a temporary anchor element
+                                const link = document.createElement('a');
+                                link.href = downloadUrl;
+                                link.download = ''; // This suggests it's a download
+                                link.style.display = 'none';
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
 
-                        console.log('Download triggered successfully via anchor element');
-                    } catch (error) {
-                        console.error('Error during download:', error);
-
-                        // Fallback to window.location.href
-                        try {
-                            console.log('Falling back to window.location.href...');
+                                console.log('Download triggered successfully via anchor element');
+                            } catch (error) {
+                                console.error('Error during download:', error);
+                                // Fallback to window.location.href
+                                window.location.href = downloadUrl;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Failed to regenerate report before download:', error);
+                            // Still try to download the existing file
+                            const downloadUrl = `/api/test_result/download/${currentTestType}/${outputFormat}`;
                             window.location.href = downloadUrl;
-                        } catch (fallbackError) {
-                            console.error('Fallback method also failed:', fallbackError);
-                            alert('Download failed: ' + fallbackError.message);
-                        }
-                    }
+                        });
                 });
             } else {
                 console.error('Download button not found!');
@@ -653,6 +663,11 @@ function resetRetestButton(deviceId, ip, label) {
 function updateDeviceInTable(deviceResult) {
     updateResultsTable(deviceResult);
     showSuccess(`Ping retest completed for ${deviceResult.label}`);
+    // Update summary after retest
+    updateSummaryFromTable();
+    
+    // Trigger report regeneration with updated results
+    regenerateReportWithUpdatedResults();
 }
 
 // Utility functions for notifications
@@ -692,6 +707,76 @@ function showNotification(message, type) {
             notification.parentNode.removeChild(notification);
         }
     }, 5000);
+}
+
+// Regenerate report files with updated test results
+function regenerateReportWithUpdatedResults() {
+    const outputFormat = document.querySelector('select[name="output_format"]').value;
+    
+    // Get current test results from table
+    const tableResults = getCurrentTableResults();
+    
+    // Send to backend to regenerate report
+    return fetch('/api/regenerate_report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            test_type: currentTestType,
+            output_format: outputFormat,
+            results: tableResults,
+            summary: document.getElementById('testSummary').textContent
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Ping report regenerated successfully');
+            return data;
+        } else {
+            console.error('Failed to regenerate ping report:', data.error);
+            throw new Error(data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error regenerating ping report:', error);
+        throw error;
+    });
+}
+
+// Extract current results from the table
+function getCurrentTableResults() {
+    const rows = document.querySelectorAll('#resultsTableBody tr[data-device-ip]');
+    const results = [];
+    
+    rows.forEach(row => {
+        const cells = row.cells;
+        
+        // Get packet loss to determine status
+        const lossCell = cells[5]; // Loss % column
+        let lossPercent = 100;
+        if (lossCell) {
+            const lossText = lossCell.textContent.trim();
+            lossPercent = parseFloat(lossText.replace('%', ''));
+        }
+        
+        results.push({
+            sr_no: parseInt(cells[0].textContent) || 0,
+            ip: cells[1].textContent,
+            device_label: cells[2].textContent, // Use device_label to match backend expectations
+            packets_tx: parseInt(cells[3].textContent) || 0,
+            packets_rx: parseInt(cells[4].textContent) || 0,
+            loss_percent: isNaN(lossPercent) ? 100 : lossPercent,
+            min_rtt: cells[6] ? cells[6].textContent : 'N/A',
+            max_rtt: cells[7] ? cells[7].textContent : 'N/A',
+            avg_rtt: cells[8] ? cells[8].textContent : 'N/A',
+            hop_count: cells[9] ? cells[9].textContent : 'N/A',
+            status: lossPercent < 100 ? 'Success' : 'Failed'
+        });
+    });
+    
+    return results;
 }
 
 function updateSummaryFromTable() {

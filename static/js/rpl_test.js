@@ -410,6 +410,12 @@ function testCompleted() {
         testSpinner.classList.add('d-none');
     }
 
+    // Enable all retest buttons
+    const retestButtons = document.querySelectorAll('#resultsTableBody button[id^="retest_"]');
+    retestButtons.forEach(button => {
+        button.disabled = false;
+    });
+
     showSuccess('RPL test completed successfully!');
 
     fetch(`/api/test_status/${currentTestType}`)
@@ -431,8 +437,18 @@ function testCompleted() {
                 newBtn.addEventListener('click', function () {
                     // Get the selected output format from the form
                     const outputFormat = document.querySelector('select[name="output_format"]').value;
-                    // Download the test result file
-                    window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                    
+                    // First regenerate the report with latest table data, then download
+                    regenerateReportWithUpdatedResults()
+                        .then(() => {
+                            // After regeneration is complete, trigger download
+                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                        })
+                        .catch(error => {
+                            console.error('Failed to regenerate report before download:', error);
+                            // Still try to download the existing file
+                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                        });
                 });
             }
         });
@@ -594,6 +610,9 @@ function updateDeviceInTable(deviceResult) {
     showSuccess(`RPL retest completed for ${deviceResult.label}`);
     // Update summary after retest
     updateSummaryFromTable();
+    
+    // Trigger report regeneration with updated results
+    regenerateReportWithUpdatedResults();
 }
 
 // Update summary based on current table data
@@ -669,6 +688,92 @@ function showNotification(message, type) {
             notification.parentNode.removeChild(notification);
         }
     }, 5000);
+}
+
+// Regenerate report files with updated test results
+function regenerateReportWithUpdatedResults() {
+    const outputFormat = document.querySelector('select[name="output_format"]').value;
+    
+    // Get current test results from table
+    const tableResults = getCurrentTableResults();
+    
+    // Send to backend to regenerate report
+    return fetch('/api/regenerate_report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            test_type: currentTestType,
+            output_format: outputFormat,
+            results: tableResults,
+            summary: document.getElementById('testSummary').textContent
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('RPL report regenerated successfully');
+            return data;
+        } else {
+            console.error('Failed to regenerate RPL report:', data.error);
+            throw new Error(data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error regenerating RPL report:', error);
+        throw error;
+    });
+}
+
+// Extract current results from the table
+function getCurrentTableResults() {
+    const rows = document.querySelectorAll('#resultsTableBody tr[data-device-ip]');
+    const results = [];
+    
+    rows.forEach(row => {
+        const cells = row.cells;
+        
+        // Extract connection status from the status cell
+        const statusCell = cells[5]; // Status column
+        let connectionStatus = 'Unknown';
+        let status = 'Failed';
+        
+        // Check the badge content in the status cell
+        const badge = statusCell.querySelector('.badge');
+        if (badge) {
+            const badgeText = badge.textContent.trim();
+            if (badgeText.includes('Connected')) {
+                connectionStatus = 'Connected';
+                status = 'Success';
+            } else if (badgeText.includes('Failed')) {
+                connectionStatus = 'Disconnected';
+                status = 'Failed';
+            }
+        } else {
+            // Fallback: check full cell text content
+            const cellText = statusCell.textContent.trim();
+            if (cellText.includes('Connected') || cellText.includes('Success')) {
+                connectionStatus = 'Connected';
+                status = 'Success';
+            } else if (cellText.includes('Failed') || cellText.includes('Error')) {
+                connectionStatus = 'Disconnected';
+                status = 'Failed';
+            }
+        }
+        
+        results.push({
+            sr_no: parseInt(cells[0].textContent) || 0,
+            ip: cells[1].textContent,
+            device_label: cells[2].textContent, // Use device_label to match backend expectations
+            hop_count: cells[3].textContent,
+            rpl_rank: cells[4].textContent,
+            status: status,
+            connection_status: connectionStatus
+        });
+    });
+    
+    return results;
 }
 
 // Initialize page when DOM is loaded

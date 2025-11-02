@@ -153,6 +153,21 @@ def pretty_print_hop_counts(hop_counts, root_node):
         print(f"Hop {hops:2d}: {node}")
 
 
+def get_wisun_tree():
+    """Get Wi-SUN network tree output"""
+    try:
+        # Run the command to get Wi-SUN tree status
+        command_output = run_command("wsbrd_cli status", timeout=30)
+        
+        if command_output and command_output.strip():
+            return command_output.strip()
+        else:
+            return None
+    except Exception as e:
+        print(f"Error getting Wi-SUN tree: {e}")
+        return None
+
+
 if __name__ == "__main__":
     DEFAULT_COMMAND = "wsbrd_cli status"
 

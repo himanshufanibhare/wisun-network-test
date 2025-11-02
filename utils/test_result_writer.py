@@ -209,6 +209,29 @@ class TestResultWriter:
         """Append test summary"""
         self.summary_text = summary_text  # Store for table generation
     
+    def clear_file(self):
+        """Clear the file and reinitialize it"""
+        self.results = []
+        if hasattr(self, 'summary_text'):
+            delattr(self, 'summary_text')
+        self._initialize_file()
+    
+    def write_header(self, header_info):
+        """Write header information"""
+        # Header info is included in initialization
+        pass
+    
+    def write_summary(self, summary_text):
+        """Write test summary"""
+        self.summary_text = summary_text
+    
+    def add_wisun_tree(self, tree_output, timestamp):
+        """Add Wi-SUN tree information to the report"""
+        print(f"DEBUG: TestResultWriter.add_wisun_tree called with output length: {len(tree_output) if tree_output else 0}")
+        self.wisun_tree_output = tree_output
+        self.wisun_tree_timestamp = timestamp
+        print(f"DEBUG: Wi-SUN tree stored for format: {self.output_format}")
+    
     def finalize(self):
         """Finalize and save the file with table format"""
         if self.output_format == 'txt':
@@ -266,6 +289,17 @@ class TestResultWriter:
                 f.write(f"{'=' * 80}\n")
                 f.write(f"{self.summary_text}\n")
                 f.write(f"Completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            
+            # Add Wi-SUN tree at the end if available
+            if hasattr(self, 'wisun_tree_output'):
+                print(f"DEBUG: Adding Wi-SUN tree to TXT file")
+                f.write(f"\n\nWI-SUN NETWORK TREE\n")
+                f.write(f"{'=' * 80}\n")
+                f.write(f"Generated: {self.wisun_tree_timestamp}\n")
+                f.write(f"{'=' * 80}\n")
+                f.write(f"{self.wisun_tree_output}\n")
+            else:
+                print(f"DEBUG: No Wi-SUN tree data available for TXT file")
 
     def _generate_pdf_table(self):
         """Generate PDF file with table format"""
@@ -324,6 +358,32 @@ class TestResultWriter:
             self.pdf_story.append(Paragraph(f"Completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", 
                                           self.pdf_styles['Normal']))
         
+        # Add Wi-SUN tree at the end if available
+        if hasattr(self, 'wisun_tree_output'):
+            self.pdf_story.append(Spacer(1, 30))
+            tree_style = ParagraphStyle(
+                'TreeTitle',
+                parent=self.pdf_styles['Heading2'],
+                fontSize=14,
+                spaceAfter=12
+            )
+            self.pdf_story.append(Paragraph("Wi-SUN Network Tree", tree_style))
+            self.pdf_story.append(Paragraph(f"Generated: {self.wisun_tree_timestamp}", 
+                                          self.pdf_styles['Normal']))
+            self.pdf_story.append(Spacer(1, 12))
+            
+            # Add tree output in monospace font
+            tree_lines = self.wisun_tree_output.split('\n')
+            for line in tree_lines:
+                if line.strip():
+                    mono_style = ParagraphStyle(
+                        'Monospace',
+                        parent=self.pdf_styles['Normal'],
+                        fontName='Courier',
+                        fontSize=8
+                    )
+                    self.pdf_story.append(Paragraph(line, mono_style))
+        
         # Build PDF
         doc = SimpleDocTemplate(self.file_path, pagesize=letter)
         doc.build(self.pdf_story)
@@ -354,6 +414,26 @@ class TestResultWriter:
             row_cells = table.add_row().cells
             for i, data in enumerate(row_data):
                 row_cells[i].text = str(data)
+        
+        # Add summary if available
+        if hasattr(self, 'summary_text'):
+            self.doc.add_paragraph('')  # Add spacing
+            self.doc.add_heading('Test Summary', level=2)
+            self.doc.add_paragraph(self.summary_text)
+            self.doc.add_paragraph(f"Completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        # Add Wi-SUN tree at the end if available
+        if hasattr(self, 'wisun_tree_output'):
+            self.doc.add_page_break()
+            self.doc.add_heading('Wi-SUN Network Tree', level=1)
+            self.doc.add_paragraph(f"Generated: {self.wisun_tree_timestamp}")
+            self.doc.add_paragraph('')  # Add spacing
+            
+            # Add tree output with monospace font
+            tree_paragraph = self.doc.add_paragraph()
+            tree_run = tree_paragraph.add_run(self.wisun_tree_output)
+            tree_run.font.name = 'Courier New'
+            tree_run.font.size = DocxInches(0.1)  # Readable font size
         
         # Save document
         self.doc.save(self.file_path)

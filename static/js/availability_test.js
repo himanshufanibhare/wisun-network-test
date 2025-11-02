@@ -410,6 +410,12 @@ function testCompleted() {
     document.getElementById('stopBtn').disabled = true;
     document.getElementById('testSpinner').classList.add('d-none');
 
+    // Enable all retest buttons
+    const retestButtons = document.querySelectorAll('#resultsTableBody button[id^="retest_"]');
+    retestButtons.forEach(button => {
+        button.disabled = false;
+    });
+
     showSuccess('Availability test completed successfully!');
 
     fetch(`/api/test_status/${currentTestType}`)
@@ -433,8 +439,18 @@ function testCompleted() {
                 newBtn.addEventListener('click', function () {
                     // Get the selected output format from the form
                     const outputFormat = document.querySelector('select[name="output_format"]').value;
-                    // Download the test result file
-                    window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                    
+                    // First regenerate the report with latest table data, then download
+                    regenerateReportWithUpdatedResults()
+                        .then(() => {
+                            // After regeneration is complete, trigger download
+                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                        })
+                        .catch(error => {
+                            console.error('Failed to regenerate report before download:', error);
+                            // Still try to download the existing file
+                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
+                        });
                 });
             }
         });
@@ -590,6 +606,9 @@ function updateDeviceInTable(deviceResult) {
     showSuccess(`Availability retest completed for ${deviceResult.label}`);
     // Update summary after retest
     updateSummaryFromTable();
+    
+    // Trigger report regeneration with updated results
+    regenerateReportWithUpdatedResults();
 }
 
 // Update summary based on current table data
@@ -667,6 +686,78 @@ function showNotification(message, type) {
             notification.parentNode.removeChild(notification);
         }
     }, 5000);
+}
+
+// Regenerate report files with updated test results
+function regenerateReportWithUpdatedResults() {
+    const outputFormat = document.querySelector('select[name="output_format"]').value;
+    
+    // Get current test results from table
+    const tableResults = getCurrentTableResults();
+    
+    // Send to backend to regenerate report
+    return fetch('/api/regenerate_report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            test_type: currentTestType,
+            output_format: outputFormat,
+            results: tableResults,
+            summary: document.getElementById('testSummary').textContent
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Availability report regenerated successfully');
+            return data;
+        } else {
+            console.error('Failed to regenerate availability report:', data.error);
+            throw new Error(data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error regenerating availability report:', error);
+        throw error;
+    });
+}
+
+// Extract current results from the table
+function getCurrentTableResults() {
+    const rows = document.querySelectorAll('#resultsTableBody tr[data-device-ip]');
+    const results = [];
+    
+    rows.forEach(row => {
+        const cells = row.cells;
+        
+        // Extract availability data from cells
+        let isAvailable = false;
+        let statusText = 'Unknown';
+        
+        // Check availability percentage (cell 3)
+        const availabilityCell = cells[3];
+        if (availabilityCell) {
+            const availText = availabilityCell.textContent.trim();
+            const availPercent = parseFloat(availText.replace('%', ''));
+            isAvailable = !isNaN(availPercent) && availPercent > 0;
+            statusText = isAvailable ? 'Available' : 'Unavailable';
+        }
+        
+        results.push({
+            sr_no: parseInt(cells[0].textContent) || 0,
+            ip: cells[1].textContent,
+            device_label: cells[2].textContent, // Use device_label to match backend expectations
+            availability_percent: availabilityCell ? availabilityCell.textContent : '0%',
+            uptime: cells[4] ? cells[4].textContent : 'N/A',
+            downtime: cells[5] ? cells[5].textContent : 'N/A',
+            hop_count: cells[6] ? cells[6].textContent : 'N/A',
+            status: statusText
+        });
+    });
+    
+    return results;
 }
 
 // Initialize page when DOM is loaded
