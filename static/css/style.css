@@ -184,11 +184,6 @@ body {
 }
 
 
-/* Footer */
-footer {
-    margin-top: auto;
-}
-
 /* Test results styling */
 #testResults {
     background-color: #f8f9fa;
@@ -380,12 +375,14 @@ footer {
     border-top: 1px solid #dee2e6;
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     position: relative;
-    min-height: 30px;
+    height: 50px; /* Fixed height */
+    display: flex;
+    align-items: center;
 }
 
 footer .container {
     position: relative;
-    min-height: 30px;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -407,17 +404,42 @@ footer .developer-credit strong {
     font-weight: 500;
 }
 
-/* Position developer credit in bottom-right corner */
+/* Developer name link styling */
+footer .developer-link {
+    color: inherit;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+footer .developer-link:hover {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+footer .developer-link strong {
+    color: var(--primary-color); /* Keep blue color always */
+    transition: all 0.3s ease;
+}
+
+footer .developer-link:hover strong {
+    color: #0056b3; /* Darker blue on hover */
+}
+
+/* Position developer credit center-aligned with main text, spaced from corner */
 footer .position-absolute {
     position: absolute !important;
-    bottom: 0.1rem !important;
-    right: 0.25rem !important;
+    top: 50%;
+    transform: translateY(-50%);
+    right: -6rem !important; /* Moved closer to corner */
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 /* Portfolio button styling - made more visible and highlighted */
 .btn-outline-secondary.btn-xs {
     padding: 0.25rem 0.5rem;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     border-radius: 15px;
     transition: all 0.3s ease;
     text-decoration: none;
@@ -426,6 +448,11 @@ footer .position-absolute {
     color: var(--primary-color);
     background: linear-gradient(135deg, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.05));
     font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
 }
 
 .btn-outline-secondary.btn-xs:hover {
@@ -443,25 +470,26 @@ footer .position-absolute {
 /* Responsive footer adjustments */
 @media (max-width: 768px) {
     footer {
-        min-height: 35px;
+        height: 45px; /* Slightly smaller on mobile */
     }
     
     footer .container {
-        min-height: 35px;
+        height: 100%;
     }
     
     footer .position-absolute {
-        position: absolute !important;
-        bottom: 0.05rem !important;
-        right: 0.15rem !important;
+        right: 0.4rem !important; /* Closer to corner on mobile */
+        gap: 0.25rem;
     }
     
     footer .developer-credit {
-        font-size: 0.6rem !important;
+        font-size: 0.65rem !important;
     }
     
     .btn-outline-secondary.btn-xs {
         padding: 0.15rem 0.3rem;
         font-size: 0.6rem;
+        min-width: 20px;
+        height: 20px;
     }
 }

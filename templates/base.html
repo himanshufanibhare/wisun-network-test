@@ -12,7 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
 </head>
 
-<body>
+<body class="d-flex flex-column min-vh-100">
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">
@@ -27,26 +27,28 @@
         </div>
     </nav>
 
-    <main class="container-fluid mt-4">
+    <main class="container-fluid mt-4 flex-grow-1">
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="bg-light mt-5 py-1">
+    <footer class="bg-light mt-auto">
         <div class="container position-relative">
             <div class="text-center">
                 <small class="text-muted">Wi-SUN Network Test 2025</small>
             </div>
-            <div class="position-absolute bottom-0 end-0" style="right: 0; bottom: 0;">
-                <small class="text-muted developer-credit" style="font-size: 0.7rem;">
+            <div class="position-absolute bottom-0 end-0">
+                <small class="text-muted developer-credit">
                     <i class="fas fa-code me-1"></i>
-                    Developed by <strong>Himanshu Fanibhare</strong>
+                    Developed by <a href="https://himanshu-portfolio-beryl.vercel.app/" 
+                                   target="_blank" 
+                                   class="developer-link"
+                                   title="Visit Developer Portfolio"><strong>Himanshu Fanibhare</strong></a>
                 </small>
                 <a href="https://himanshu-portfolio-beryl.vercel.app/" 
                    target="_blank" 
                    class="btn btn-outline-secondary btn-xs ms-1"
-                   style="font-size: 0.65rem; padding: 0.2rem 0.4rem;"
                    title="Visit Developer Portfolio">
-                    <i class="fas fa-user" style="font-size: 0.65rem;"></i>
+                    <i class="fas fa-user"></i>
                 </a>
             </div>
         </div>
