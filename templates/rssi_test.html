@@ -75,12 +75,17 @@
                                     <i class="fas fa-stop me-1"></i>Stop Test
                                 </button>
                             </div>
-                            <!-- Second row: Wi-SUN Tree -->
-                            <div class="d-flex">
+                            <!-- Second row: Wi-SUN Tree and Commands -->
+                            <div class="d-flex gap-2">
                                 <button type="button" id="wisunTreeBtn"
                                     class="btn btn-outline-success btn-sm flex-fill">
                                     <i class="fas fa-sitemap me-2"></i>
                                     Wi-SUN Tree
+                                </button>
+                                <button type="button" id="commandsBtn"
+                                    class="btn btn-outline-info btn-sm flex-fill" data-bs-toggle="modal" data-bs-target="#commandsModal">
+                                    <i class="fas fa-terminal me-2"></i>
+                                    Commands
                                 </button>
                             </div>
                         </div>
@@ -143,6 +148,83 @@
     </div>
 </div>
 </div>
+
+<!-- Commands Modal -->
+<div class="modal fade" id="commandsModal" tabindex="-1" aria-labelledby="commandsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="commandsModalLabel">
+                    <i class="fas fa-terminal text-info me-2"></i>
+                    Test Commands Reference
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">Copy and use this command to manually test devices:</p>
+                
+                <!-- RSSI Command -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-warning">
+                        <i class="fas fa-signal me-2"></i>RSSI Command
+                    </h6>
+                    <div class="input-group">
+                        <input type="text" class="form-control font-monospace" 
+                               value="coap-client-notls -m post -N -B 100 -t text coap://[ip_address]:5683/om2m" 
+                               id="rssiCommand" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyCommand('rssiCommand')">
+                            <i class="fas fa-copy me-1"></i>Copy
+                        </button>
+                    </div>
+                    <small class="text-muted">Replace [ip_address] with the target device IP</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Copy command functionality
+    function copyCommand(inputId) {
+        const input = document.getElementById(inputId);
+        input.select();
+        input.setSelectionRange(0, 99999); // For mobile devices
+        
+        try {
+            navigator.clipboard.writeText(input.value).then(() => {
+                // Show success feedback
+                const button = input.nextElementSibling;
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+                button.classList.remove('btn-outline-secondary');
+                button.classList.add('btn-success');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-outline-secondary');
+                }, 2000);
+            });
+        } catch (err) {
+            // Fallback for older browsers
+            document.execCommand('copy');
+            const button = input.nextElementSibling;
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+            button.classList.remove('btn-outline-secondary');
+            button.classList.add('btn-success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-secondary');
+            }, 2000);
+        }
+    }
+</script>
 
 <!-- RSSI Test Results Table -->
 <div class="row mb-4">
