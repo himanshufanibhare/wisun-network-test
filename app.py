@@ -717,10 +717,12 @@ def run_test(test_type, params, output_format='txt'):
     print(f"Refreshing hop counts before {test_type} test...")
     try:
         refresh_hop_counts()
-        hop_counts = load_hop_counts()
+        hop_counts_data = load_hop_counts()
+        hop_counts = hop_counts_data.get('hop_counts', {}) if hop_counts_data else {}
         print(f"Loaded hop counts for {len(hop_counts)} devices")
     except Exception as e:
         print(f"Warning: Failed to refresh hop counts: {e}")
+        hop_counts_data = {}
         hop_counts = {}
     
     def progress_callback(current, total, device_name, device_result=None):
@@ -730,7 +732,7 @@ def run_test(test_type, params, output_format='txt'):
         
         # Add hop count to device result if available
         if device_result and 'ip' in device_result:
-            device_result['hop_count'] = get_hop_count_for_ip(device_result['ip'], hop_counts)
+            device_result['hop_count'] = get_hop_count_for_ip(device_result['ip'], hop_counts_data)
             print(f"DEBUG: progress_callback - device_result before mapping: {device_result}")
             
             # Map device result fields for TestResultWriter compatibility
@@ -781,8 +783,8 @@ def run_test(test_type, params, output_format='txt'):
             # Track test start time
             test_start_time = time.time()
             
-            # Run the ping test and capture success/fail counts
-            success, fail = pingTest.ping_all_devices(log_file, progress_callback, stop_callback, count, timeout, pause_callback)
+            # Run the ping test and capture success/fail/skipped counts
+            success, fail, skipped = pingTest.ping_all_devices(log_file, progress_callback, stop_callback, count, timeout, pause_callback)
             
             # Calculate total test duration
             test_end_time = time.time()
@@ -790,17 +792,22 @@ def run_test(test_type, params, output_format='txt'):
             duration_minutes = int(total_duration // 60)
             duration_seconds = int(total_duration % 60)
             
-            total_run = success + fail
+            total_run = success + fail + skipped
+            tested = success + fail  # Only devices actually tested (not skipped)
             if duration_minutes > 0:
                 duration_str = f"{duration_minutes}m {duration_seconds}s"
             else:
                 duration_str = f"{duration_seconds}s"
             
-            summary = f"SUMMARY: {success}/{total_run} devices reachable ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate) - Duration: {duration_str}"
+            if skipped > 0:
+                summary = f"SUMMARY: {success}/{tested} devices reachable ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate), {skipped} skipped - Duration: {duration_str}"
+            else:
+                summary = f"SUMMARY: {success}/{tested} devices reachable ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate) - Duration: {duration_str}"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
+            test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
             test_status[test_type]['duration'] = total_duration
             
@@ -809,13 +816,18 @@ def run_test(test_type, params, output_format='txt'):
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
-            success, fail = rssiTest.fetch_rsl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
-            total_run = success + fail
-            summary = f"SUMMARY: {success}/{total_run} devices responded ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate)"
+            success, fail, skipped = rssiTest.fetch_rsl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            total_run = success + fail + skipped
+            tested = success + fail  # Only devices actually tested (not skipped)
+            if skipped > 0:
+                summary = f"SUMMARY: {success}/{tested} devices responded ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate), {skipped} skipped"
+            else:
+                summary = f"SUMMARY: {success}/{tested} devices responded ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate)"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
+            test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
             
         elif test_type == 'rpl':
@@ -823,13 +835,18 @@ def run_test(test_type, params, output_format='txt'):
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
-            success, fail = rplTest.fetch_rpl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
-            total_run = success + fail
-            summary = f"SUMMARY: {success}/{total_run} devices responded ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate)"
+            success, fail, skipped = rplTest.fetch_rpl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            total_run = success + fail + skipped
+            tested = success + fail  # Only devices actually tested (not skipped)
+            if skipped > 0:
+                summary = f"SUMMARY: {success}/{tested} devices responded ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate), {skipped} skipped"
+            else:
+                summary = f"SUMMARY: {success}/{tested} devices responded ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate)"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
+            test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
             
         elif test_type == 'disconnections':
@@ -837,13 +854,18 @@ def run_test(test_type, params, output_format='txt'):
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
-            success, fail = disconnectionsTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
-            total_run = success + fail
-            summary = f"SUMMARY: {success}/{total_run} devices responded ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate)"
+            success, fail, skipped = disconnectionsTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            total_run = success + fail + skipped
+            tested = success + fail  # Only devices actually tested (not skipped)
+            if skipped > 0:
+                summary = f"SUMMARY: {success}/{tested} devices responded ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate), {skipped} skipped"
+            else:
+                summary = f"SUMMARY: {success}/{tested} devices responded ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate)"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
+            test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
             
         elif test_type == 'availability':
@@ -851,13 +873,18 @@ def run_test(test_type, params, output_format='txt'):
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
-            success, fail = availabilityTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
-            total_run = success + fail
-            summary = f"SUMMARY: {success}/{total_run} devices available ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate)"
+            success, fail, skipped = availabilityTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            total_run = success + fail + skipped
+            tested = success + fail  # Only devices actually tested (not skipped)
+            if skipped > 0:
+                summary = f"SUMMARY: {success}/{tested} devices available ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate), {skipped} skipped"
+            else:
+                summary = f"SUMMARY: {success}/{tested} devices available ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate)"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
+            test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
             
         # Write summary and finalize the result file

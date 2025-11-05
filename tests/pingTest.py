@@ -9,7 +9,7 @@ import re
 import time
 from tests.logger import get_logger
 from tests.ip import FAN11_FSK_IPV6
-from tests.hopCountUtils import get_hop_count_for_ip
+from tests.hopCountUtils import get_hop_count_for_ip, should_skip_device, create_skipped_result, load_hop_counts
 
 timeout = 120
 packet_count = 100
@@ -147,10 +147,13 @@ def ping_all_devices(log_path=None, progress_callback=None, stop_callback=None, 
     # Track test start time
     test_start_time = time.time()
     
+    # Load hop counts data once for efficiency
+    hop_counts_data = load_hop_counts()
+    
     logger = get_logger("pingtest", log_path)
     log_test_start(logger, "Ping", f"Testing {len(FAN11_FSK_IPV6)} devices")
 
-    success, fail = 0, 0
+    success, fail, skipped = 0, 0, 0
     total_devices = len(FAN11_FSK_IPV6)
     current_device = 0
 
@@ -169,6 +172,38 @@ def ping_all_devices(log_path=None, progress_callback=None, stop_callback=None, 
                 return success, fail
 
         current_device += 1
+        
+        # Check if device should be skipped
+        if should_skip_device(ip, hop_counts_data):
+            skipped += 1
+            hop_count = get_hop_count_for_ip(ip) if hop_counts_data else -1
+            
+            # Create skipped result
+            result = create_skipped_result('ping', ip, device_name, hop_count)
+            
+            # Log the skip
+            logger.info(f"SKIPPED: {device_name} ({ip}) - Not in hop_counts.json")
+            
+            # Send skipped result to progress callback
+            if progress_callback:
+                device_result = {
+                    'ip': ip,
+                    'label': device_name,
+                    'hop_count': hop_count,
+                    'packets_tx': 0,
+                    'packets_rx': 0,
+                    'loss_percent': 0.0,
+                    'min_time': '-',
+                    'max_time': '-',
+                    'avg_time': '-',
+                    'mdev_time': '-',
+                    'connection_status': 'Skipped'
+                }
+                progress_callback(current_device, total_devices, f"Skipped {device_name}", device_result)
+            
+            continue
+
+        # Normal ping test for non-skipped devices
         result = ping_device(ip, count, timeout_val, stop_callback)
 
         if result["packets_received"] > 0:
@@ -183,7 +218,7 @@ def ping_all_devices(log_path=None, progress_callback=None, stop_callback=None, 
             device_result = {
                 'ip': ip,
                 'label': device_name,
-                'hop_count': get_hop_count_for_ip(ip),
+                'hop_count': get_hop_count_for_ip(ip, hop_counts_data),  # Pass the pre-loaded data
                 'packets_tx': result.get('packets_transmitted', 0),
                 'packets_rx': result.get('packets_received', 0),
                 'loss_percent': result.get('packet_loss', 100.0),
@@ -206,10 +241,14 @@ def ping_all_devices(log_path=None, progress_callback=None, stop_callback=None, 
         duration_str = f"{duration_seconds}s"
     
     total = len(FAN11_FSK_IPV6)
-    summary = f"SUMMARY: {success}/{total} devices reachable ({(success / total) * 100:.1f}% success rate) - Duration: {duration_str}"
+    tested = success + fail
+    if skipped > 0:
+        summary = f"SUMMARY: {success}/{tested} devices reachable ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate), {skipped} skipped - Duration: {duration_str}"
+    else:
+        summary = f"SUMMARY: {success}/{tested} devices reachable ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate) - Duration: {duration_str}"
 
     log_test_end(logger, "Ping", summary)
-    return success, fail
+    return success, fail, skipped
 
 
 if __name__ == "__main__":
