@@ -17,14 +17,17 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 class TestResultWriter:
     def __init__(self, test_type, output_format, timestamp=None):
+        print(f"DEBUG: TestResultWriter.__init__ called with test_type='{test_type}', output_format='{output_format}'")
         self.test_type = test_type
         self.output_format = output_format.lower()
+        print(f"DEBUG: Normalized output_format to: '{self.output_format}'")
         self.timestamp = timestamp or datetime.now().strftime("%Y%m%d_%H%M%S")
         self.base_dir = "reports"
         
         # Create directories if they don't exist
         self.output_dir = os.path.join(self.base_dir, self.output_format)
         os.makedirs(self.output_dir, exist_ok=True)
+        print(f"DEBUG: Created output directory: {self.output_dir}")
         
         # Set up file paths
         self.filename = f"{test_type}_test_{self.timestamp}"
@@ -35,10 +38,13 @@ class TestResultWriter:
         elif self.output_format == 'word':
             self.file_path = os.path.join(self.output_dir, f"{self.filename}.docx")
         
+        print(f"DEBUG: File path set to: {self.file_path}")
+        
         # Store all results for table format
         self.results = []
         
         # Initialize the file
+        print(f"DEBUG: Initializing file for output_format: {self.output_format}")
         self._initialize_file()
     
     def _initialize_file(self):
@@ -128,9 +134,11 @@ class TestResultWriter:
     
     def append_result(self, device_result):
         """Store device result for table format"""
+        print(f"DEBUG: append_result called with device_result: {device_result}")
         # Add serial number
         device_result['sr_no'] = len(self.results) + 1
         self.results.append(device_result)
+        print(f"DEBUG: Result appended. Total results now: {len(self.results)}")
     
     def _get_table_headers(self):
         """Get table headers based on test type"""
@@ -154,7 +162,7 @@ class TestResultWriter:
         # Find the position of this result in the results list
         sr_no = str(self.results.index(result) + 1)
         ip = result.get('ip', 'N/A')
-        device_label = result.get('device_label', 'Unknown')
+        device_label = result.get('device_label', result.get('label', 'Unknown'))  # Check both field names
         hop_count = str(result.get('hop_count', 'N/A'))
         
         # Base row with common fields
@@ -164,10 +172,10 @@ class TestResultWriter:
             packets_tx = str(result.get('packets_tx', 'N/A'))
             packets_rx = str(result.get('packets_rx', 'N/A'))
             loss_percent = f"{result.get('loss_percent', 'N/A')}%" if result.get('loss_percent') is not None else 'N/A'
-            min_rtt = str(result.get('min_rtt', 'N/A'))
-            max_rtt = str(result.get('max_rtt', 'N/A'))
-            avg_rtt = str(result.get('avg_rtt', 'N/A'))
-            mdev = str(result.get('mdev', 'N/A'))
+            min_rtt = str(result.get('min_time', 'N/A'))  # Changed from min_rtt to min_time
+            max_rtt = str(result.get('max_time', 'N/A'))  # Changed from max_rtt to max_time
+            avg_rtt = str(result.get('avg_time', 'N/A'))  # Changed from avg_rtt to avg_time
+            mdev = str(result.get('mdev_time', 'N/A'))    # Changed from mdev to mdev_time
             connection_status = result.get('connection_status', 'Unknown')
             
             row.extend([packets_tx, packets_rx, loss_percent, min_rtt, max_rtt, avg_rtt, mdev, connection_status])
@@ -206,40 +214,38 @@ class TestResultWriter:
         return row
     
     def append_summary(self, summary_text):
-        """Append test summary"""
-        self.summary_text = summary_text  # Store for table generation
-    
-    def clear_file(self):
-        """Clear the file and reinitialize it"""
-        self.results = []
-        if hasattr(self, 'summary_text'):
-            delattr(self, 'summary_text')
-        self._initialize_file()
-    
-    def write_header(self, header_info):
-        """Write header information"""
-        # Header info is included in initialization
-        pass
-    
-    def write_summary(self, summary_text):
-        """Write test summary"""
+        """Store summary text for finalization"""
         self.summary_text = summary_text
     
+    def write_summary(self, summary_text):
+        """Store summary text for finalization (alias for append_summary)"""
+        print(f"DEBUG: write_summary called with: {summary_text}")
+        self.append_summary(summary_text)
+    
     def add_wisun_tree(self, tree_output, timestamp):
-        """Add Wi-SUN tree information to the report"""
-        print(f"DEBUG: TestResultWriter.add_wisun_tree called with output length: {len(tree_output) if tree_output else 0}")
+        """Add Wi-SUN tree output to the report"""
+        print(f"DEBUG: add_wisun_tree called with tree output length: {len(tree_output)}")
         self.wisun_tree_output = tree_output
         self.wisun_tree_timestamp = timestamp
-        print(f"DEBUG: Wi-SUN tree stored for format: {self.output_format}")
     
     def finalize(self):
         """Finalize and save the file with table format"""
+        print(f"DEBUG: TestResultWriter.finalize() called for output_format: {self.output_format}")
+        print(f"DEBUG: Number of results to write: {len(self.results)}")
+        
         if self.output_format == 'txt':
             self._generate_txt_table()
         elif self.output_format == 'pdf':
             self._generate_pdf_table()
         elif self.output_format == 'word':
+            print(f"DEBUG: Calling _generate_word_table()")
             self._generate_word_table()
+        
+        print(f"DEBUG: Finalization complete. File path: {self.file_path}")
+        print(f"DEBUG: File exists after finalization: {os.path.exists(self.file_path)}")
+        if os.path.exists(self.file_path):
+            file_size = os.path.getsize(self.file_path)
+            print(f"DEBUG: File size: {file_size} bytes")
         
         return self.file_path
     
@@ -289,17 +295,6 @@ class TestResultWriter:
                 f.write(f"{'=' * 80}\n")
                 f.write(f"{self.summary_text}\n")
                 f.write(f"Completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-            
-            # Add Wi-SUN tree at the end if available
-            if hasattr(self, 'wisun_tree_output'):
-                print(f"DEBUG: Adding Wi-SUN tree to TXT file")
-                f.write(f"\n\nWI-SUN NETWORK TREE\n")
-                f.write(f"{'=' * 80}\n")
-                f.write(f"Generated: {self.wisun_tree_timestamp}\n")
-                f.write(f"{'=' * 80}\n")
-                f.write(f"{self.wisun_tree_output}\n")
-            else:
-                print(f"DEBUG: No Wi-SUN tree data available for TXT file")
 
     def _generate_pdf_table(self):
         """Generate PDF file with table format"""
@@ -358,39 +353,15 @@ class TestResultWriter:
             self.pdf_story.append(Paragraph(f"Completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", 
                                           self.pdf_styles['Normal']))
         
-        # Add Wi-SUN tree at the end if available
-        if hasattr(self, 'wisun_tree_output'):
-            self.pdf_story.append(Spacer(1, 30))
-            tree_style = ParagraphStyle(
-                'TreeTitle',
-                parent=self.pdf_styles['Heading2'],
-                fontSize=14,
-                spaceAfter=12
-            )
-            self.pdf_story.append(Paragraph("Wi-SUN Network Tree", tree_style))
-            self.pdf_story.append(Paragraph(f"Generated: {self.wisun_tree_timestamp}", 
-                                          self.pdf_styles['Normal']))
-            self.pdf_story.append(Spacer(1, 12))
-            
-            # Add tree output in monospace font
-            tree_lines = self.wisun_tree_output.split('\n')
-            for line in tree_lines:
-                if line.strip():
-                    mono_style = ParagraphStyle(
-                        'Monospace',
-                        parent=self.pdf_styles['Normal'],
-                        fontName='Courier',
-                        fontSize=8
-                    )
-                    self.pdf_story.append(Paragraph(line, mono_style))
-        
         # Build PDF
         doc = SimpleDocTemplate(self.file_path, pagesize=letter)
         doc.build(self.pdf_story)
     
     def _generate_word_table(self):
         """Generate Word document with table format"""
+        print(f"DEBUG: _generate_word_table() called")
         headers = self._get_table_headers()
+        print(f"DEBUG: Table headers: {headers}")
         
         # Add table title
         self.doc.add_heading('Test Results', level=1)
@@ -398,13 +369,31 @@ class TestResultWriter:
         # Create table
         table = self.doc.add_table(rows=1, cols=len(headers))
         table.style = 'Table Grid'
+        print(f"DEBUG: Created table with {len(headers)} columns")
+        
+        # Set column widths based on content
+        if self.test_type == 'ping':
+            # Ping test has 12 columns, adjust to fit on page
+            col_widths = [DocxInches(0.4), DocxInches(1.8), DocxInches(1.0), DocxInches(0.6), 
+                         DocxInches(0.6), DocxInches(0.6), DocxInches(0.6), DocxInches(0.6), 
+                         DocxInches(0.6), DocxInches(0.6), DocxInches(0.6), DocxInches(1.0)]
+        else:
+            # Other tests have fewer columns
+            col_widths = [DocxInches(0.5), DocxInches(2.5), DocxInches(1.5), DocxInches(1.0), 
+                         DocxInches(1.5), DocxInches(1.5)]
+        
+        # Apply column widths
+        for i, width in enumerate(col_widths[:len(headers)]):
+            for cell in table.columns[i].cells:
+                cell.width = width
         
         # Set header row
         header_cells = table.rows[0].cells
         for i, header in enumerate(headers):
             header_cells[i].text = header
-            # Make header bold
+            # Make header bold and center-aligned
             for paragraph in header_cells[i].paragraphs:
+                paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 for run in paragraph.runs:
                     run.bold = True
         
@@ -414,6 +403,13 @@ class TestResultWriter:
             row_cells = table.add_row().cells
             for i, data in enumerate(row_data):
                 row_cells[i].text = str(data)
+                # Center-align numeric data columns
+                if i > 3:  # After basic info columns (Sr No, IP, Label, Hop Count)
+                    for paragraph in row_cells[i].paragraphs:
+                        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Set table alignment
+        table.alignment = WD_ALIGN_PARAGRAPH.CENTER
         
         # Add summary if available
         if hasattr(self, 'summary_text'):
@@ -436,7 +432,16 @@ class TestResultWriter:
             tree_run.font.size = DocxInches(0.1)  # Readable font size
         
         # Save document
+        print(f"DEBUG: Saving Word document to: {self.file_path}")
         self.doc.save(self.file_path)
+        print(f"DEBUG: Word document saved successfully")
+        
+        # Verify file was created
+        if os.path.exists(self.file_path):
+            file_size = os.path.getsize(self.file_path)
+            print(f"DEBUG: Verified file exists with size: {file_size} bytes")
+        else:
+            print(f"ERROR: Word file was not created at: {self.file_path}")
     
     def get_file_path(self):
         """Get the current file path"""

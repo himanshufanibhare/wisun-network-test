@@ -27,15 +27,7 @@ def map_device_result_for_writer(device_result, test_type):
     mapped_result = device_result.copy()
     
     if test_type == 'ping':
-        # Map ping-specific fields
-        if 'min_time' in device_result:
-            mapped_result['min_rtt'] = device_result['min_time']
-        if 'max_time' in device_result:
-            mapped_result['max_rtt'] = device_result['max_time']
-        if 'avg_time' in device_result:
-            mapped_result['avg_rtt'] = device_result['avg_time']
-        if 'mdev_time' in device_result:
-            mapped_result['mdev'] = device_result['mdev_time']
+        # Map ping-specific fields - keep original field names that match ping test output
         if 'label' in device_result:
             mapped_result['device_label'] = device_result['label']
         
@@ -659,32 +651,56 @@ def regenerate_report():
 def download_test_result(test_type, format):
     """Download test result file in specified format - always serves the most up-to-date version"""
     try:
+        print(f"DEBUG: Download request for {test_type} in {format} format")
+        print(f"DEBUG: Current test_status for {test_type}: {test_status.get(test_type, 'Not found')}")
+        
         # First check if we have a current result file
         if test_type in test_status and 'result_file' in test_status[test_type]:
             result_file = test_status[test_type]['result_file']
+            print(f"DEBUG: Found result_file in test_status: {result_file}")
+            print(f"DEBUG: File exists: {os.path.exists(result_file)}")
+            
             if os.path.exists(result_file):
                 # Check if the file format matches what's requested
                 if result_file.endswith(f'.{format}') or (format == 'word' and result_file.endswith('.docx')):
                     print(f"DEBUG: Serving existing up-to-date file: {result_file}")
                     return send_file(result_file, as_attachment=True)
+                else:
+                    print(f"DEBUG: File format mismatch. Requested: {format}, File: {result_file}")
+            else:
+                print(f"DEBUG: Result file does not exist: {result_file}")
+        else:
+            print(f"DEBUG: No result_file found in test_status for {test_type}")
         
         # If no matching file found, try to find the latest file in the reports directory
         reports_dir = f"reports/{format}"
+        print(f"DEBUG: Searching in directory: {reports_dir}")
+        
         if os.path.exists(reports_dir):
             files = [f for f in os.listdir(reports_dir) if f.startswith(f"{test_type}_test_")]
+            print(f"DEBUG: Found {len(files)} files in {reports_dir}")
+            
             if files:
                 # Get the most recent file
                 latest_file = max(files, key=lambda x: os.path.getctime(os.path.join(reports_dir, x)))
                 file_path = os.path.join(reports_dir, latest_file)
+                print(f"DEBUG: Latest file found: {latest_file}")
+                
                 if os.path.exists(file_path):
                     print(f"DEBUG: Serving latest file from directory: {file_path}")
                     return send_file(file_path, as_attachment=True)
+                else:
+                    print(f"DEBUG: Latest file does not exist: {file_path}")
+        else:
+            print(f"DEBUG: Reports directory does not exist: {reports_dir}")
         
         print(f"DEBUG: No report file found for {test_type} in {format} format")
         return f"No {format.upper()} test result file found for {test_type}", 404
         
     except Exception as e:
         print(f"ERROR: Failed to download test result: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return f"Error downloading {format.upper()} report: {str(e)}", 500
 
 def run_test(test_type, params, output_format='txt'):
@@ -692,7 +708,10 @@ def run_test(test_type, params, output_format='txt'):
     
     # Initialize result writer
     result_writer = TestResultWriter(test_type, output_format)
-    test_status[test_type]['result_file'] = result_writer.get_file_path()
+    initial_file_path = result_writer.get_file_path()
+    test_status[test_type]['result_file'] = initial_file_path
+    print(f"DEBUG: Initialized result_writer for {test_type} with output_format: {output_format}")
+    print(f"DEBUG: Initial file path set to: {initial_file_path}")
     
     # Refresh hop counts before starting test
     print(f"Refreshing hop counts before {test_type} test...")
@@ -712,15 +731,21 @@ def run_test(test_type, params, output_format='txt'):
         # Add hop count to device result if available
         if device_result and 'ip' in device_result:
             device_result['hop_count'] = get_hop_count_for_ip(device_result['ip'], hop_counts)
+            print(f"DEBUG: progress_callback - device_result before mapping: {device_result}")
             
             # Map device result fields for TestResultWriter compatibility
             mapped_result = map_device_result_for_writer(device_result, test_type)
+            print(f"DEBUG: progress_callback - mapped_result: {mapped_result}")
             
             # Write result to the chosen format file
             try:
+                print(f"DEBUG: progress_callback - calling result_writer.append_result")
                 result_writer.append_result(mapped_result)
+                print(f"DEBUG: progress_callback - result_writer.append_result completed successfully")
             except Exception as e:
                 print(f"Warning: Failed to write result to {output_format} file: {e}")
+                import traceback
+                traceback.print_exc()
         
         # Prepare socket data
         socket_data = {
@@ -856,8 +881,18 @@ def run_test(test_type, params, output_format='txt'):
                 
                 final_file_path = result_writer.finalize()
                 print(f"Test results saved to: {final_file_path}")
+                
+                # Update test status with the final file path
+                if test_type in test_status:
+                    test_status[test_type]['result_file'] = final_file_path
+                    print(f"DEBUG: Updated result_file in test_status to: {final_file_path}")
+                
             except Exception as e:
                 print(f"Warning: Failed to finalize result file: {e}")
+                # Remove result_file from status if finalization failed
+                if test_type in test_status and 'result_file' in test_status[test_type]:
+                    del test_status[test_type]['result_file']
+                    print(f"DEBUG: Removed result_file from test_status due to finalization error")
             
     except Exception as e:
         print(f"DEBUG: Exception in run_test for {test_type}: {str(e)}")
