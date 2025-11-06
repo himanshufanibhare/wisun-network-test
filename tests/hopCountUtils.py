@@ -230,26 +230,6 @@ def create_skipped_result(test_type, ip, device_name, hop_count=None):
         })
     
     return base_result
-    """
-    Get hop count for a specific IP address
-    Returns: hop count as integer or '-' if not found
-    """
-    if hop_counts_dict is None:
-        hop_counts_dict = load_hop_counts()
-    
-    # Normalize IP address to lowercase for comparison
-    normalized_ip = ip_address.lower()
-    
-    # Try exact match first
-    if normalized_ip in hop_counts_dict:
-        return hop_counts_dict[normalized_ip]
-    
-    # Try to find partial match (in case of different IPv6 formats)
-    for stored_ip, hop_count in hop_counts_dict.items():
-        if normalized_ip in stored_ip.lower() or stored_ip.lower() in normalized_ip:
-            return hop_count
-    
-    return '-'
 
 def refresh_hop_counts():
     """

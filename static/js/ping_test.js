@@ -356,12 +356,12 @@ function updateResultsTable(deviceResult) {
 
     // Determine status display with badges
     let statusHTML;
-    if (deviceResult.loss_percent === 0) {
+    if (deviceResult.connection_status === 'Skipped') {
+        statusHTML = `<span class="badge bg-secondary"><i class="fas fa-minus-circle"></i> Skipped</span>`;
+    } else if (deviceResult.loss_percent !== undefined && deviceResult.loss_percent !== '-' && deviceResult.loss_percent < 100) {
         statusHTML = `<span class="badge bg-success"><i class="fas fa-check"></i> Connected</span>`;
-    } else if (deviceResult.loss_percent === 100) {
+    } else if (deviceResult.loss_percent === 100 || deviceResult.loss_percent === '-') {
         statusHTML = `<span class="badge bg-danger"><i class="fas fa-times"></i> Failed</span>`;
-    } else if (deviceResult.loss_percent > 0 && deviceResult.loss_percent < 100) {
-        statusHTML = `<span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Unstable</span>`;
     } else {
         statusHTML = `<span class="badge bg-secondary"><i class="fas fa-question"></i> Unknown</span>`;
     }
@@ -370,10 +370,10 @@ function updateResultsTable(deviceResult) {
         <td class="srno-column">${srNo}</td>
         <td class="ip-column">${deviceResult.ip}</td>
         <td>${deviceResult.label || '-'}</td>
-        <td class="hop-count-column">${deviceResult.hop_count || '-'}</td>
+        <td class="hop-count-column">${deviceResult.hop_count === -1 ? '-' : (deviceResult.hop_count || '-')}</td>
         <td class="metric-column">${deviceResult.packets_tx || '-'}</td>
         <td class="metric-column">${deviceResult.packets_rx || '-'}</td>
-        <td class="metric-column ${getStatusClass(deviceResult.loss_percent)}">${deviceResult.loss_percent !== undefined ? deviceResult.loss_percent + '%' : '-'}</td>
+        <td class="metric-column ${getStatusClass(deviceResult.loss_percent)}">${deviceResult.loss_percent !== undefined && deviceResult.loss_percent !== '-' ? deviceResult.loss_percent + '%' : '-'}</td>
         <td class="metric-column">${deviceResult.min_time || '-'}</td>
         <td class="metric-column">${deviceResult.max_time || '-'}</td>
         <td class="metric-column">${deviceResult.avg_time || '-'}</td>
@@ -419,7 +419,7 @@ function populateResultsTable(results) {
 }
 
 function getStatusClass(lossPercent) {
-    if (lossPercent === undefined || lossPercent === null) return '';
+    if (lossPercent === undefined || lossPercent === null || lossPercent === '-') return '';
     if (lossPercent === 0) return 'status-success';
     if (lossPercent < 20) return 'status-warning';
     if (lossPercent < 100) return 'status-poor';
@@ -784,21 +784,28 @@ function updateSummaryFromTable() {
     const rows = document.querySelectorAll('#resultsTableBody tr[data-device-ip]');
     let successCount = 0;
     let totalCount = rows.length;
+    let skippedCount = 0;
 
     rows.forEach(row => {
         const lossCell = row.cells[5]; // Loss % column
         if (lossCell) {
             const lossText = lossCell.textContent.trim();
-            const lossPercent = parseFloat(lossText.replace('%', ''));
-            // Consider success if packet loss < 100%
-            if (!isNaN(lossPercent) && lossPercent < 100) {
-                successCount++;
+            if (lossText === '-') {
+                // This is a skipped device
+                skippedCount++;
+            } else {
+                const lossPercent = parseFloat(lossText.replace('%', ''));
+                // Consider success if packet loss < 100%
+                if (!isNaN(lossPercent) && lossPercent < 100) {
+                    successCount++;
+                }
             }
         }
     });
 
+    const testedCount = totalCount - skippedCount;
+    const TOTAL_DEVICES = 28; // Total devices in FAN11_FSK_IPV6
     if (totalCount > 0) {
-        const successRate = (successCount / totalCount * 100).toFixed(1);
         const summaryEl = document.getElementById('testSummary');
         if (summaryEl) {
             // Get original summary to preserve duration if it exists
@@ -806,7 +813,9 @@ function updateSummaryFromTable() {
             const durationMatch = originalSummary.match(/ - Duration: (.+)$/);
             const durationStr = durationMatch ? ` - Duration: ${durationMatch[1]}` : '';
 
-            summaryEl.textContent = `SUMMARY: ${successCount}/${totalCount} devices reachable (${successRate}% success rate)${durationStr}`;
+            // Always show success out of total devices, remove skipped count from summary
+            const successRate = (successCount / TOTAL_DEVICES * 100).toFixed(1);
+            summaryEl.textContent = `SUMMARY: ${successCount}/${TOTAL_DEVICES} devices reachable (${successRate}% success rate)${durationStr}`;
         }
     }
 }

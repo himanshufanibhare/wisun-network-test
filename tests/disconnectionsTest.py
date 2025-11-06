@@ -97,6 +97,10 @@ def check_disconnected_total(ip, timeout=120, stop_callback=None):
 
 def check_all_devices(log_file=None, progress_callback=None, stop_callback=None, timeout_val=120, pause_callback=None):
     """Check all devices and log results"""
+    # Track test start time
+    import time
+    test_start_time = time.time()
+    
     # Load hop counts data once for efficiency  
     hop_counts_data = load_hop_counts()
     
@@ -136,14 +140,13 @@ def check_all_devices(log_file=None, progress_callback=None, stop_callback=None,
                 device_result = {
                     'ip': ip,
                     'label': device_name,
-                    'hop_count': hop_count,
+                    'hop_count': '-',
                     'disconnected_total': 0,
                     'connection_status': 'Skipped'
                 }
                 progress_callback(current_device, total_devices, f"Skipped {device_name}", device_result)
             
             continue
-            break
             
         # Check for pause
         while pause_callback and pause_callback():
@@ -151,8 +154,6 @@ def check_all_devices(log_file=None, progress_callback=None, stop_callback=None,
             if stop_callback and stop_callback():  # Check stop while paused
                 logger.info("Test stopped by user while paused")
                 return success_count, fail_count, skipped_count
-                
-        current_device += 1
             
         response = check_disconnected_total(ip, timeout_val, stop_callback)
         if response:
@@ -188,12 +189,18 @@ def check_all_devices(log_file=None, progress_callback=None, stop_callback=None,
             }
             progress_callback(current_device, total_devices, f"Testing {device_name}", device_result)
 
+    # Calculate test duration
+    test_end_time = time.time()
+    total_duration = test_end_time - test_start_time
+    duration_minutes = int(total_duration // 60)
+    duration_seconds = int(total_duration % 60)
+    duration_str = f"{duration_minutes}m {duration_seconds}s"
+
     total = len(FAN11_FSK_IPV6)
     tested = success_count + fail_count  # Only devices actually tested (not skipped)
-    if skipped_count > 0:
-        summary = f"SUMMARY: {success_count}/{tested} devices responded ({(success_count/tested)*100 if tested > 0 else 0:.1f}% success rate), {skipped_count} skipped"
-    else:
-        summary = f"SUMMARY: {success_count}/{tested} devices responded ({(success_count/tested)*100 if tested > 0 else 0:.1f}% success rate)"
+    # Always show success out of total devices, remove skipped count from summary
+    success_rate = (success_count / total * 100) if total > 0 else 0
+    summary = f"SUMMARY: {success_count}/{total} devices responded ({success_rate:.1f}% success rate)\nDuration: {duration_str}"
     logger.info(summary)
     logger.info("=== DISCONNECTED_TOTAL TEST COMPLETED ===")
 

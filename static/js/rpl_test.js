@@ -346,7 +346,9 @@ function updateResultsTable(deviceResult) {
     const deviceId = deviceResult.ip.replace(/[^a-zA-Z0-9]/g, '_');
     // Determine status display based on connection status
     let statusHTML;
-    if (deviceResult.status === 'Connected' || deviceResult.connection_status === 'Connected') {
+    if (deviceResult.connection_status === 'Skipped') {
+        statusHTML = `<span class="badge bg-secondary"><i class="fas fa-minus-circle"></i> Skipped</span>`;
+    } else if (deviceResult.status === 'Connected' || deviceResult.connection_status === 'Connected') {
         statusHTML = `<span class="badge bg-success"><i class="fas fa-check"></i> Connected</span>`;
     } else if (deviceResult.status === 'Disconnected' || deviceResult.connection_status === 'Disconnected') {
         statusHTML = `<span class="badge bg-danger"><i class="fas fa-times"></i> Failed</span>`;
@@ -358,7 +360,7 @@ function updateResultsTable(deviceResult) {
         <td class="sr-no">${srNo}</td>
         <td class="ip-address">${deviceResult.ip}</td>
         <td class="device-label">${deviceResult.label || '-'}</td>
-        <td class="hop-count">${deviceResult.hop_count || '-'}</td>
+        <td class="hop-count">${deviceResult.hop_count === -1 ? '-' : (deviceResult.hop_count || '-')}</td>
         <td class="rpl-rank">${deviceResult.rpl_data || '-'}</td>
         <td class="status">${statusHTML}</td>
         <td>
@@ -638,7 +640,8 @@ function updateSummaryFromTable() {
     });
 
     if (totalCount > 0) {
-        const successRate = (successCount / totalCount * 100).toFixed(1);
+        const TOTAL_DEVICES = 28; // Total devices in FAN11_FSK_IPV6
+        const successRate = (successCount / TOTAL_DEVICES * 100).toFixed(1);
         const summaryEl = document.getElementById('testSummary');
         if (summaryEl) {
             // Get original summary to preserve duration if it exists
@@ -646,7 +649,7 @@ function updateSummaryFromTable() {
             const durationMatch = originalSummary.match(/ - Duration: (.+)$/);
             const durationStr = durationMatch ? ` - Duration: ${durationMatch[1]}` : '';
 
-            summaryEl.textContent = `SUMMARY: ${successCount}/${totalCount} devices online (${successRate}% success rate)${durationStr}`;
+            summaryEl.textContent = `SUMMARY: ${successCount}/${TOTAL_DEVICES} devices responded (${successRate}% success rate)${durationStr}`;
         }
     }
 }

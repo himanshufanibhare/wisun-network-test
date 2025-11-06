@@ -17,6 +17,7 @@ from io import BytesIO
 # Import test modules
 from tests import pingTest, rssiTest, rplTest, disconnectionsTest, availabilityTest
 from tests.hopCountUtils import refresh_hop_counts, load_hop_counts, get_hop_count_for_ip, get_hop_count_summary
+from tests.ip import FAN11_FSK_IPV6
 from utils.test_result_writer import TestResultWriter
 from utils.report_generator import (generate_txt_report, generate_pdf_report, generate_word_report, 
                                    generate_json_report, generate_csv_report, generate_xml_report,
@@ -31,14 +32,38 @@ def map_device_result_for_writer(device_result, test_type):
         if 'label' in device_result:
             mapped_result['device_label'] = device_result['label']
         
-        # Set connection status based on loss percentage
+        # Set connection status based on loss percentage (be defensive about types)
         if 'loss_percent' in device_result:
-            if device_result['loss_percent'] == 0:
-                mapped_result['connection_status'] = 'Connected'
-            elif device_result['loss_percent'] < 100:
-                mapped_result['connection_status'] = 'Unstable'
+            # Check if this is a skipped device first
+            if device_result.get('connection_status') == 'Skipped':
+                mapped_result['connection_status'] = 'Skipped'
             else:
-                mapped_result['connection_status'] = 'Failed'
+                # Coerce loss_percent to a numeric value when possible, otherwise treat as missing
+                lp_raw = device_result.get('loss_percent')
+                lp_val = None
+                try:
+                    # If lp_raw is '-' or None this will be treated as missing
+                    if lp_raw is None or lp_raw == '-':
+                        lp_val = None
+                    elif isinstance(lp_raw, (int, float)):
+                        lp_val = lp_raw
+                    else:
+                        # Try to parse numeric string
+                        lp_val = float(str(lp_raw))
+                except Exception:
+                    lp_val = None
+
+                if lp_val is None:
+                    # No numeric loss info -> treat as Skipped if explicitly marked, otherwise Unknown
+                    if device_result.get('connection_status') == 'Skipped' or lp_raw == '-':
+                        mapped_result['connection_status'] = 'Skipped'
+                    else:
+                        mapped_result['connection_status'] = 'Unknown'
+                else:
+                    if lp_val < 100:  # Any packets received = Connected
+                        mapped_result['connection_status'] = 'Connected'
+                    else:
+                        mapped_result['connection_status'] = 'Failed'
         else:
             mapped_result['connection_status'] = 'Unknown'
     
@@ -794,15 +819,15 @@ def run_test(test_type, params, output_format='txt'):
             
             total_run = success + fail + skipped
             tested = success + fail  # Only devices actually tested (not skipped)
+            total_devices = len(FAN11_FSK_IPV6)  # Total devices in IP list
             if duration_minutes > 0:
                 duration_str = f"{duration_minutes}m {duration_seconds}s"
             else:
                 duration_str = f"{duration_seconds}s"
             
-            if skipped > 0:
-                summary = f"SUMMARY: {success}/{tested} devices reachable ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate), {skipped} skipped - Duration: {duration_str}"
-            else:
-                summary = f"SUMMARY: {success}/{tested} devices reachable ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate) - Duration: {duration_str}"
+            # Always show success out of total devices, remove skipped count from summary
+            success_rate = (success / total_devices * 100) if total_devices > 0 else 0
+            summary = f"SUMMARY: {success}/{total_devices} devices reachable ({success_rate:.1f}% success rate) - Duration: {duration_str}"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
@@ -816,76 +841,130 @@ def run_test(test_type, params, output_format='txt'):
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
+
+            # Track test start time
+            test_start_time = time.time()
+            
             success, fail, skipped = rssiTest.fetch_rsl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            
+            # Calculate test duration
+            test_end_time = time.time()
+            total_duration = test_end_time - test_start_time
+            duration_minutes = int(total_duration // 60)
+            duration_seconds = int(total_duration % 60)
+            
+            if duration_minutes > 0:
+                duration_str = f"{duration_minutes}m {duration_seconds}s"
+            else:
+                duration_str = f"{duration_seconds}s"
+            
             total_run = success + fail + skipped
             tested = success + fail  # Only devices actually tested (not skipped)
-            if skipped > 0:
-                summary = f"SUMMARY: {success}/{tested} devices responded ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate), {skipped} skipped"
-            else:
-                summary = f"SUMMARY: {success}/{tested} devices responded ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate)"
+            total_devices = len(FAN11_FSK_IPV6)  # Total devices in IP list
+            # Always show success out of total devices, remove skipped count from summary
+            success_rate = (success / total_devices * 100) if total_devices > 0 else 0
+            summary = f"SUMMARY: {success}/{total_devices} devices responded ({success_rate:.1f}% success rate) - Duration: {duration_str}"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
             test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
+            test_status[test_type]['duration'] = total_duration
             
         elif test_type == 'rpl':
             timeout = params.get('timeout', 100)
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
+
+            # Track test start time
+            test_start_time = time.time()
+            
             success, fail, skipped = rplTest.fetch_rpl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            
+            # Calculate test duration
+            test_end_time = time.time()
+            total_duration = test_end_time - test_start_time
+            duration_minutes = int(total_duration // 60)
+            duration_seconds = int(total_duration % 60)
+            
+            if duration_minutes > 0:
+                duration_str = f"{duration_minutes}m {duration_seconds}s"
+            else:
+                duration_str = f"{duration_seconds}s"
+            
             total_run = success + fail + skipped
             tested = success + fail  # Only devices actually tested (not skipped)
-            if skipped > 0:
-                summary = f"SUMMARY: {success}/{tested} devices responded ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate), {skipped} skipped"
-            else:
-                summary = f"SUMMARY: {success}/{tested} devices responded ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate)"
+            total_devices = len(FAN11_FSK_IPV6)  # Total devices in IP list
+            # Always show success out of total devices, remove skipped count from summary
+            success_rate = (success / total_devices * 100) if total_devices > 0 else 0
+            summary = f"SUMMARY: {success}/{total_devices} devices responded ({success_rate:.1f}% success rate) - Duration: {duration_str}"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
             test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
+            test_status[test_type]['duration'] = total_duration
             
         elif test_type == 'disconnections':
             timeout = params.get('timeout', 120)
+            # Record start time for duration calculation
+            start_time = time.time()
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
             success, fail, skipped = disconnectionsTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            # Calculate duration
+            end_time = time.time()
+            total_duration = end_time - start_time
             total_run = success + fail + skipped
             tested = success + fail  # Only devices actually tested (not skipped)
-            if skipped > 0:
-                summary = f"SUMMARY: {success}/{tested} devices responded ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate), {skipped} skipped"
-            else:
-                summary = f"SUMMARY: {success}/{tested} devices responded ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate)"
+            total_devices = len(FAN11_FSK_IPV6)  # Total devices in IP list
+            # Always show success out of total devices, remove skipped count from summary
+            success_rate = (success / total_devices * 100) if total_devices > 0 else 0
+            # Format duration for display
+            duration_minutes = int(total_duration // 60)
+            duration_seconds = int(total_duration % 60)
+            duration_str = f"{duration_minutes}m {duration_seconds}s"
+            summary = f"SUMMARY: {success}/{total_devices} devices responded ({success_rate:.1f}% success rate)\nDuration: {duration_str}"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
             test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
+            test_status[test_type]['duration'] = total_duration
             
         elif test_type == 'availability':
             timeout = params.get('timeout', 120)
+            # Record start time for duration calculation
+            start_time = time.time()
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
             success, fail, skipped = availabilityTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            # Calculate duration
+            end_time = time.time()
+            total_duration = end_time - start_time
             total_run = success + fail + skipped
             tested = success + fail  # Only devices actually tested (not skipped)
-            if skipped > 0:
-                summary = f"SUMMARY: {success}/{tested} devices available ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate), {skipped} skipped"
-            else:
-                summary = f"SUMMARY: {success}/{tested} devices available ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate)"
+            total_devices = len(FAN11_FSK_IPV6)  # Total devices in IP list
+            # Always show success out of total devices, remove skipped count from summary
+            success_rate = (success / total_devices * 100) if total_devices > 0 else 0
+            # Format duration for display
+            duration_minutes = int(total_duration // 60)
+            duration_seconds = int(total_duration % 60)
+            duration_str = f"{duration_minutes}m {duration_seconds}s"
+            summary = f"SUMMARY: {success}/{total_devices} devices available ({success_rate:.1f}% success rate)\nDuration: {duration_str}"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
             test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
+            test_status[test_type]['duration'] = total_duration
             
         # Write summary and finalize the result file
         if test_type in test_status and 'summary' in test_status[test_type]:

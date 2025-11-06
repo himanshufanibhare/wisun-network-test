@@ -189,10 +189,10 @@ def ping_all_devices(log_path=None, progress_callback=None, stop_callback=None, 
                 device_result = {
                     'ip': ip,
                     'label': device_name,
-                    'hop_count': hop_count,
+                    'hop_count': '-',
                     'packets_tx': 0,
                     'packets_rx': 0,
-                    'loss_percent': 0.0,
+                    'loss_percent': '-',
                     'min_time': '-',
                     'max_time': '-',
                     'avg_time': '-',
@@ -242,10 +242,9 @@ def ping_all_devices(log_path=None, progress_callback=None, stop_callback=None, 
     
     total = len(FAN11_FSK_IPV6)
     tested = success + fail
-    if skipped > 0:
-        summary = f"SUMMARY: {success}/{tested} devices reachable ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate), {skipped} skipped - Duration: {duration_str}"
-    else:
-        summary = f"SUMMARY: {success}/{tested} devices reachable ({(success / tested * 100) if tested > 0 else 0:.1f}% success rate) - Duration: {duration_str}"
+    # Always show success out of total devices, remove skipped count from summary
+    success_rate = (success / total * 100) if total > 0 else 0
+    summary = f"SUMMARY: {success}/{total} devices reachable ({success_rate:.1f}% success rate) - Duration: {duration_str}"
 
     log_test_end(logger, "Ping", summary)
     return success, fail, skipped

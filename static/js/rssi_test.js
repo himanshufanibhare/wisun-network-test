@@ -355,7 +355,9 @@ function updateResultsTable(deviceResult) {
 
     // Determine status display with badges
     let statusHTML;
-    if (deviceResult.connection_status === 'Success' || deviceResult.connection_status === 'Connected') {
+    if (deviceResult.connection_status === 'Skipped') {
+        statusHTML = `<span class="badge bg-secondary"><i class="fas fa-minus-circle"></i> Skipped</span>`;
+    } else if (deviceResult.connection_status === 'Success' || deviceResult.connection_status === 'Connected') {
         statusHTML = `<span class="badge bg-success"><i class="fas fa-check"></i> Connected</span>`;
     } else if (deviceResult.connection_status === 'Failed' || deviceResult.connection_status === 'Error') {
         statusHTML = `<span class="badge bg-danger"><i class="fas fa-times"></i> Failed</span>`;
@@ -373,7 +375,7 @@ function updateResultsTable(deviceResult) {
         <td class="sr-no">${srNo}</td>
         <td class="ip-address">${deviceResult.ip}</td>
         <td class="device-label">${deviceResult.label || '-'}</td>
-        <td class="hop-count">${deviceResult.hop_count || '-'}</td>
+        <td class="hop-count">${deviceResult.hop_count === -1 ? '-' : (deviceResult.hop_count || '-')}</td>
         <td class="rsl-in">${deviceResult.rsl_in || '-'}</td>
         <td class="rsl-out">${deviceResult.rsl_out || '-'}</td>
         <td class="connection-status">${statusHTML}</td>
@@ -443,12 +445,8 @@ function testCompleted() {
         .then(data => {
             const summaryEl = document.getElementById('testSummary');
             
-            // Use locally calculated summary if we have table data, otherwise use backend summary
-            const hasTableData = document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0;
-            if (hasTableData) {
-                console.log('Using locally calculated RSSI summary instead of backend summary');
-                updateSummaryFromTable(); // Update with current table data
-            } else if (data && data.summary) {
+            // Always use backend summary first (which includes duration), then update if needed
+            if (data && data.summary) {
                 summaryEl.textContent = data.summary;
             } else {
                 summaryEl.textContent = 'RSSI test completed.';
@@ -679,15 +677,16 @@ function updateSummaryFromTable() {
     });
 
     if (totalCount > 0) {
-        const successRate = (successCount / totalCount * 100).toFixed(1);
+        const TOTAL_DEVICES = 28; // Total devices in FAN11_FSK_IPV6
+        const successRate = (successCount / TOTAL_DEVICES * 100).toFixed(1);
         const summaryEl = document.getElementById('testSummary');
         if (summaryEl) {
             // Get original summary to preserve duration if it exists
             const originalSummary = summaryEl.textContent;
-            const durationMatch = originalSummary.match(/ - Duration: (.+)$/);
+            const durationMatch = originalSummary.match(/Duration: (.+)$/);
             const durationStr = durationMatch ? ` - Duration: ${durationMatch[1]}` : '';
 
-            summaryEl.textContent = `SUMMARY: ${successCount}/${totalCount} devices connected (${successRate}% success rate)${durationStr}`;
+            summaryEl.textContent = `SUMMARY: ${successCount}/${TOTAL_DEVICES} devices responded (${successRate}% success rate)${durationStr}`;
         }
     }
 }
