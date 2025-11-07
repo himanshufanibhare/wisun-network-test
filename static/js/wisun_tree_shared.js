@@ -55,6 +55,39 @@ function initializeWisunTreeSharedFeatures() {
             if (errorElement) errorElement.classList.remove('d-none');
         },
 
+        createNodesRawText: function(nodes, type) {
+            if (!nodes || nodes.length === 0) {
+                return `<div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No ${type} nodes found.
+                </div>`;
+            }
+
+            let rawText = "Sr No".padEnd(8) + "Device Name".padEnd(25) + "IP Address".padEnd(42);
+            if (type === 'connected') {
+                rawText += "Hop Count\n";
+            } else {
+                rawText += "Status\n";
+            }
+
+            // Add separator line
+            rawText += "─".repeat(85) + "\n";
+
+            nodes.forEach((node, index) => {
+                const serialNo = `${index + 1}.`.padEnd(8);
+                const deviceName = node.device_name.padEnd(25);
+                const ipAddress = node.ip.padEnd(42);
+                
+                if (type === 'connected') {
+                    rawText += `${serialNo}${deviceName}${ipAddress}${node.hop_count}\n`;
+                } else {
+                    rawText += `${serialNo}${deviceName}${ipAddress}${node.status}\n`;
+                }
+            });
+
+            return `<pre class="bg-dark text-light p-3 rounded" style="max-height: 500px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre;">${rawText}</pre>`;
+        },
+
         createNodesTable: function(nodes, type) {
             if (!nodes || nodes.length === 0) {
                 return `<div class="alert alert-info">
@@ -132,10 +165,10 @@ function initializeWisunTreeSharedFeatures() {
                     if (countElement) countElement.textContent = data.count;
                     if (totalCountElement) totalCountElement.textContent = data.total_nodes;
                     
-                    // Create table for connected nodes
+                    // Create raw text for connected nodes
                     if (listElement) {
-                        const tableHtml = window.wisunTreeShared.createNodesTable(data.nodes, 'connected');
-                        listElement.innerHTML = tableHtml;
+                        const rawTextHtml = window.wisunTreeShared.createNodesRawText(data.nodes, 'connected');
+                        listElement.innerHTML = rawTextHtml;
                     }
                     
                     if (contentElement) contentElement.classList.remove('d-none');
@@ -169,10 +202,10 @@ function initializeWisunTreeSharedFeatures() {
                     if (countElement) countElement.textContent = data.count;
                     if (totalCountElement) totalCountElement.textContent = data.total_nodes;
                     
-                    // Create table for disconnected nodes
+                    // Create raw text for disconnected nodes
                     if (listElement) {
-                        const tableHtml = window.wisunTreeShared.createNodesTable(data.nodes, 'disconnected');
-                        listElement.innerHTML = tableHtml;
+                        const rawTextHtml = window.wisunTreeShared.createNodesRawText(data.nodes, 'disconnected');
+                        listElement.innerHTML = rawTextHtml;
                     }
                     
                     if (contentElement) contentElement.classList.remove('d-none');

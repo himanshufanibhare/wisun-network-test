@@ -15,6 +15,9 @@ function initializeTestPage() {
 
     // Check if test is already running
     checkTestStatus();
+    
+    // Initialize Wi-SUN tree functionality
+    initializeWisunTreeFeatures();
 }
 
 function setupEventListeners() {
@@ -825,63 +828,208 @@ document.addEventListener('DOMContentLoaded', function () {
     console.log('RSSI test page loaded');
 
     // Initialize Wi-SUN Tree functionality
-    initializeWisunTree();
+    initializeWisunTreeFeatures();
 });
 
-function initializeWisunTree() {
+function initializeWisunTreeFeatures() {
     const wisunTreeBtn = document.getElementById('wisunTreeBtn');
-    const wisunTreeModal = new bootstrap.Modal(document.getElementById('wisunTreeModal'));
     const refreshTreeBtn = document.getElementById('refreshTreeBtn');
-
-    if (!wisunTreeBtn || !wisunTreeModal || !refreshTreeBtn) {
-        console.log('Wi-SUN tree elements not found');
+    const connectedNodesBtn = document.getElementById('connectedNodesBtn');
+    const disconnectedNodesBtn = document.getElementById('disconnectedNodesBtn');
+    
+    if (!wisunTreeBtn) {
+        console.log('Wi-SUN tree button not found, skipping initialization');
         return;
     }
 
-    // Show modal and fetch data when button is clicked
+    const wisunTreeModal = new bootstrap.Modal(document.getElementById('wisunTreeModal'), {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+
+    // Show modal and fetch tree data when button is clicked
     wisunTreeBtn.addEventListener('click', function () {
-        console.log('Wi-SUN tree button clicked');
+        // Ensure any existing backdrop is removed before showing
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.paddingRight = '';
+        
         wisunTreeModal.show();
         fetchWisunTreeData();
     });
 
-    // Refresh data when refresh button is clicked
-    refreshTreeBtn.addEventListener('click', function () {
-        fetchWisunTreeData();
+    // Ensure proper cleanup when modal is hidden
+    document.getElementById('wisunTreeModal').addEventListener('hidden.bs.modal', function () {
+        // Clean up any remaining backdrop
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.paddingRight = '';
+        document.body.style.overflow = '';
     });
 
+    // Refresh tree data when refresh button is clicked
+    if (refreshTreeBtn) {
+        refreshTreeBtn.addEventListener('click', function () {
+            fetchWisunTreeData();
+        });
+    }
+
+    // Show connected nodes when button is clicked
+    if (connectedNodesBtn) {
+        connectedNodesBtn.addEventListener('click', function () {
+            fetchConnectedNodes();
+        });
+    }
+
+    // Show disconnected nodes when button is clicked
+    if (disconnectedNodesBtn) {
+        disconnectedNodesBtn.addEventListener('click', function () {
+            fetchDisconnectedNodes();
+        });
+    }
+
+    function hideAllContent() {
+        const elements = ['wisunTreeContent', 'connectedNodesContent', 'disconnectedNodesContent'];
+        elements.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.classList.add('d-none');
+        });
+    }
+
+    function showLoading(message = 'Fetching Wi-SUN data...') {
+        const loadingElement = document.getElementById('wisunTreeLoading');
+        const errorElement = document.getElementById('wisunTreeError');
+        const loadingText = document.querySelector('#wisunTreeLoading p');
+        
+        if (loadingElement) loadingElement.classList.remove('d-none');
+        if (errorElement) errorElement.classList.add('d-none');
+        if (loadingText) loadingText.textContent = message;
+        hideAllContent();
+    }
+
+    function hideLoading() {
+        const loadingElement = document.getElementById('wisunTreeLoading');
+        if (loadingElement) loadingElement.classList.add('d-none');
+    }
+
+    function showError(errorText) {
+        hideLoading();
+        const errorTextElement = document.getElementById('wisunTreeErrorText');
+        const errorElement = document.getElementById('wisunTreeError');
+        
+        if (errorTextElement) errorTextElement.textContent = errorText;
+        if (errorElement) errorElement.classList.remove('d-none');
+    }
+
     function fetchWisunTreeData() {
-        console.log('Fetching Wi-SUN tree data');
-        // Show loading state
-        document.getElementById('wisunTreeLoading').classList.remove('d-none');
-        document.getElementById('wisunTreeError').classList.add('d-none');
-        document.getElementById('wisunTreeContent').classList.add('d-none');
-        refreshTreeBtn.disabled = true;
+        showLoading('Fetching Wi-SUN tree status...');
+        if (refreshTreeBtn) refreshTreeBtn.disabled = true;
 
         fetch('/api/wisun_tree')
             .then(response => response.json())
             .then(data => {
-                document.getElementById('wisunTreeLoading').classList.add('d-none');
-                refreshTreeBtn.disabled = false;
+                hideLoading();
+                if (refreshTreeBtn) refreshTreeBtn.disabled = false;
 
                 if (data.success) {
-                    // Show success content
                     document.getElementById('wisunTreeTimestamp').textContent = data.timestamp;
                     document.getElementById('wisunTreeDeviceCount').textContent = data.device_count || 0;
                     document.getElementById('wisunTreeOutput').textContent = data.output;
                     document.getElementById('wisunTreeContent').classList.remove('d-none');
                 } else {
-                    // Show error
-                    document.getElementById('wisunTreeErrorText').textContent = data.error;
-                    document.getElementById('wisunTreeError').classList.remove('d-none');
+                    showError(data.error);
                 }
             })
             .catch(error => {
-                console.error('Wi-SUN tree fetch error:', error);
-                document.getElementById('wisunTreeLoading').classList.add('d-none');
-                document.getElementById('wisunTreeErrorText').textContent = 'Network error: ' + error.message;
-                document.getElementById('wisunTreeError').classList.remove('d-none');
-                refreshTreeBtn.disabled = false;
+                hideLoading();
+                showError('Network error: ' + error.message);
+                if (refreshTreeBtn) refreshTreeBtn.disabled = false;
             });
+    }
+
+    function fetchConnectedNodes() {
+        showLoading('Fetching connected nodes...');
+
+        fetch('/api/wisun_nodes/connected')
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+
+                if (data.success) {
+                    document.getElementById('connectedNodesTimestamp').textContent = data.timestamp;
+                    document.getElementById('connectedNodesCount').textContent = data.count;
+                    document.getElementById('connectedNodesTotalCount').textContent = data.total_nodes;
+                    
+                    const rawTextHtml = createNodesRawText(data.nodes, 'connected');
+                    document.getElementById('connectedNodesList').innerHTML = rawTextHtml;
+                    document.getElementById('connectedNodesContent').classList.remove('d-none');
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showError('Network error: ' + error.message);
+            });
+    }
+
+    function fetchDisconnectedNodes() {
+        showLoading('Fetching disconnected nodes...');
+
+        fetch('/api/wisun_nodes/disconnected')
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+
+                if (data.success) {
+                    document.getElementById('disconnectedNodesTimestamp').textContent = data.timestamp;
+                    document.getElementById('disconnectedNodesCount').textContent = data.count;
+                    document.getElementById('disconnectedNodesTotalCount').textContent = data.total_nodes;
+                    
+                    const rawTextHtml = createNodesRawText(data.nodes, 'disconnected');
+                    document.getElementById('disconnectedNodesList').innerHTML = rawTextHtml;
+                    document.getElementById('disconnectedNodesContent').classList.remove('d-none');
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showError('Network error: ' + error.message);
+            });
+    }
+
+    function createNodesRawText(nodes, type) {
+        if (!nodes || nodes.length === 0) {
+            return `<div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No ${type} nodes found.
+            </div>`;
+        }
+
+        let rawText = "Sr No".padEnd(8) + "Device Name".padEnd(25) + "IP Address".padEnd(42);
+        if (type === 'connected') {
+            rawText += "Hop Count\n";
+        } else {
+            rawText += "Status\n";
+        }
+
+        // Add separator line
+        rawText += "─".repeat(85) + "\n";
+
+        nodes.forEach((node, index) => {
+            const serialNo = `${index + 1}.`.padEnd(8);
+            const deviceName = node.device_name.padEnd(25);
+            const ipAddress = node.ip.padEnd(42);
+            
+            if (type === 'connected') {
+                rawText += `${serialNo}${deviceName}${ipAddress}${node.hop_count}\n`;
+            } else {
+                rawText += `${serialNo}${deviceName}${ipAddress}${node.status}\n`;
+            }
+        });
+
+        return `<pre class="bg-dark text-light p-3 rounded" style="max-height: 500px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre;">${rawText}</pre>`;
     }
 }

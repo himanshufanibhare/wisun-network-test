@@ -136,13 +136,60 @@
                     <pre id="wisunTreeOutput" class="bg-dark text-light p-3 rounded"
                         style="max-height: 500px; overflow-y: auto;"></pre>
                 </div>
+                <!-- Connected Nodes Content -->
+                <div id="connectedNodesContent" class="d-none">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <p class="mb-1"><strong>Generated:</strong> <span id="connectedNodesTimestamp"></span></p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p class="mb-1">
+                                <strong>Connected:</strong> 
+                                <span id="connectedNodesCount" class="badge bg-success">-</span>
+                                /
+                                <span id="connectedNodesTotalCount" class="badge bg-primary">-</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div id="connectedNodesList" class="table-responsive">
+                        <!-- Connected nodes content will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Disconnected Nodes Content -->
+                <div id="disconnectedNodesContent" class="d-none">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <p class="mb-1"><strong>Generated:</strong> <span id="disconnectedNodesTimestamp"></span></p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p class="mb-1">
+                                <strong>Disconnected:</strong> 
+                                <span id="disconnectedNodesCount" class="badge bg-danger">-</span>
+                                /
+                                <span id="disconnectedNodesTotalCount" class="badge bg-primary">-</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div id="disconnectedNodesList" class="table-responsive">
+                        <!-- Disconnected nodes content will be populated here -->
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button id="refreshTreeBtn" class="btn btn-success">
+                <button type="button" class="btn btn-success btn-sm me-2" id="connectedNodesBtn">
+                    <i class="fas fa-plug me-1"></i>
+                    Connected
+                </button>
+                <button type="button" class="btn btn-danger btn-sm me-2" id="disconnectedNodesBtn">
+                    <i class="fas fa-unlink me-1"></i>
+                    Disconnected
+                </button>
+                <button id="refreshTreeBtn" class="btn btn-info btn-sm me-2">
                     <i class="fas fa-sync-alt me-1"></i>
                     Refresh
                 </button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -299,6 +346,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/wisun_tree_shared.js') }}"></script>
 <script src="{{ url_for('static', filename='js/rssi_test.js') }}"></script>
 <script>
     // Initialize RSSI test page
