@@ -1316,6 +1316,95 @@ def download_wisun_tree(format_type):
             'error': f'Failed to generate report: {str(e)}'
         }), 500
 
+@app.route('/api/wisun_nodes/connected', methods=['GET'])
+def get_connected_nodes():
+    """Get list of connected Wi-SUN nodes"""
+    try:
+        from tests.ip import FAN11_FSK_IPV6
+        hop_counts_data = load_hop_counts()
+        
+        # Extract the actual hop_counts dictionary from the loaded data
+        if isinstance(hop_counts_data, dict) and 'hop_counts' in hop_counts_data:
+            actual_hop_counts = hop_counts_data['hop_counts']
+        else:
+            actual_hop_counts = hop_counts_data
+        
+        connected_nodes = []
+        total_nodes = len(FAN11_FSK_IPV6)
+        
+        for device_name, device_ip in FAN11_FSK_IPV6.items():
+            # Convert to lowercase for comparison with hop_counts.json
+            ip_lower = device_ip.lower()
+            
+            if ip_lower in actual_hop_counts:
+                hop_count = actual_hop_counts[ip_lower]
+                connected_nodes.append({
+                    'device_name': device_name,
+                    'ip': device_ip,
+                    'hop_count': hop_count
+                })
+        
+        # Sort by hop count, then by device name
+        connected_nodes.sort(key=lambda x: (x['hop_count'], x['device_name']))
+        
+        return jsonify({
+            'success': True,
+            'nodes': connected_nodes,
+            'count': len(connected_nodes),
+            'total_nodes': total_nodes,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False, 
+            'error': f'Failed to get connected nodes: {str(e)}'
+        }), 500
+
+@app.route('/api/wisun_nodes/disconnected', methods=['GET'])
+def get_disconnected_nodes():
+    """Get list of disconnected Wi-SUN nodes"""
+    try:
+        from tests.ip import FAN11_FSK_IPV6
+        hop_counts_data = load_hop_counts()
+        
+        # Extract the actual hop_counts dictionary from the loaded data
+        if isinstance(hop_counts_data, dict) and 'hop_counts' in hop_counts_data:
+            actual_hop_counts = hop_counts_data['hop_counts']
+        else:
+            actual_hop_counts = hop_counts_data
+        
+        disconnected_nodes = []
+        total_nodes = len(FAN11_FSK_IPV6)
+        
+        for device_name, device_ip in FAN11_FSK_IPV6.items():
+            # Convert to lowercase for comparison with hop_counts.json
+            ip_lower = device_ip.lower()
+            
+            if ip_lower not in actual_hop_counts:
+                disconnected_nodes.append({
+                    'device_name': device_name,
+                    'ip': device_ip,
+                    'status': 'Disconnected'
+                })
+        
+        # Sort by device name
+        disconnected_nodes.sort(key=lambda x: x['device_name'])
+        
+        return jsonify({
+            'success': True,
+            'nodes': disconnected_nodes,
+            'count': len(disconnected_nodes),
+            'total_nodes': total_nodes,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False, 
+            'error': f'Failed to get disconnected nodes: {str(e)}'
+        }), 500
+
 if __name__ == '__main__':
     # Initialize hop counts before starting the server
     initialize_hop_counts()

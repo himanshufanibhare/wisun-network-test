@@ -15,6 +15,9 @@ function initializeTestPage() {
 
     // Check if test is already running
     checkTestStatus();
+    
+    // Initialize Wi-SUN tree functionality
+    initializeWisunTreeFeatures();
 }
 
 function setupEventListeners() {
@@ -824,3 +827,212 @@ function updateSummaryFromTable() {
 document.addEventListener('DOMContentLoaded', function () {
     console.log('Ping test page loaded');
 });
+
+// Wi-SUN Tree functionality
+function initializeWisunTreeFeatures() {
+    const wisunTreeBtn = document.getElementById('wisunTreeBtn');
+    const refreshTreeBtn = document.getElementById('refreshTreeBtn');
+    const connectedNodesBtn = document.getElementById('connectedNodesBtn');
+    const disconnectedNodesBtn = document.getElementById('disconnectedNodesBtn');
+    
+    if (!wisunTreeBtn) {
+        console.log('Wi-SUN tree button not found, skipping initialization');
+        return;
+    }
+
+    const wisunTreeModal = new bootstrap.Modal(document.getElementById('wisunTreeModal'));
+
+    // Show modal and fetch tree data when button is clicked
+    wisunTreeBtn.addEventListener('click', function () {
+        wisunTreeModal.show();
+        fetchWisunTreeData();
+    });
+
+    // Refresh tree data when refresh button is clicked
+    if (refreshTreeBtn) {
+        refreshTreeBtn.addEventListener('click', function () {
+            fetchWisunTreeData();
+        });
+    }
+
+    // Show connected nodes when button is clicked
+    if (connectedNodesBtn) {
+        connectedNodesBtn.addEventListener('click', function () {
+            fetchConnectedNodes();
+        });
+    }
+
+    // Show disconnected nodes when button is clicked
+    if (disconnectedNodesBtn) {
+        disconnectedNodesBtn.addEventListener('click', function () {
+            fetchDisconnectedNodes();
+        });
+    }
+
+    function hideAllContent() {
+        const elements = ['wisunTreeContent', 'connectedNodesContent', 'disconnectedNodesContent'];
+        elements.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.classList.add('d-none');
+        });
+    }
+
+    function showLoading(message = 'Fetching Wi-SUN data...') {
+        const loadingElement = document.getElementById('wisunTreeLoading');
+        const errorElement = document.getElementById('wisunTreeError');
+        const loadingText = document.querySelector('#wisunTreeLoading p');
+        
+        if (loadingElement) loadingElement.classList.remove('d-none');
+        if (errorElement) errorElement.classList.add('d-none');
+        if (loadingText) loadingText.textContent = message;
+        hideAllContent();
+    }
+
+    function hideLoading() {
+        const loadingElement = document.getElementById('wisunTreeLoading');
+        if (loadingElement) loadingElement.classList.add('d-none');
+    }
+
+    function showError(errorText) {
+        hideLoading();
+        const errorTextElement = document.getElementById('wisunTreeErrorText');
+        const errorElement = document.getElementById('wisunTreeError');
+        
+        if (errorTextElement) errorTextElement.textContent = errorText;
+        if (errorElement) errorElement.classList.remove('d-none');
+    }
+
+    function fetchWisunTreeData() {
+        showLoading('Fetching Wi-SUN tree status...');
+        if (refreshTreeBtn) refreshTreeBtn.disabled = true;
+
+        fetch('/api/wisun_tree')
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (refreshTreeBtn) refreshTreeBtn.disabled = false;
+
+                if (data.success) {
+                    document.getElementById('wisunTreeTimestamp').textContent = data.timestamp;
+                    document.getElementById('wisunTreeDeviceCount').textContent = data.device_count || 0;
+                    document.getElementById('wisunTreeOutput').textContent = data.output;
+                    document.getElementById('wisunTreeContent').classList.remove('d-none');
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showError('Network error: ' + error.message);
+                if (refreshTreeBtn) refreshTreeBtn.disabled = false;
+            });
+    }
+
+    function fetchConnectedNodes() {
+        showLoading('Fetching connected nodes...');
+
+        fetch('/api/wisun_nodes/connected')
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+
+                if (data.success) {
+                    document.getElementById('connectedNodesTimestamp').textContent = data.timestamp;
+                    document.getElementById('connectedNodesCount').textContent = data.count;
+                    document.getElementById('connectedNodesTotalCount').textContent = data.total_nodes;
+                    
+                    const tableHtml = createNodesTable(data.nodes, 'connected');
+                    document.getElementById('connectedNodesList').innerHTML = tableHtml;
+                    document.getElementById('connectedNodesContent').classList.remove('d-none');
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showError('Network error: ' + error.message);
+            });
+    }
+
+    function fetchDisconnectedNodes() {
+        showLoading('Fetching disconnected nodes...');
+
+        fetch('/api/wisun_nodes/disconnected')
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+
+                if (data.success) {
+                    document.getElementById('disconnectedNodesTimestamp').textContent = data.timestamp;
+                    document.getElementById('disconnectedNodesCount').textContent = data.count;
+                    document.getElementById('disconnectedNodesTotalCount').textContent = data.total_nodes;
+                    
+                    const tableHtml = createNodesTable(data.nodes, 'disconnected');
+                    document.getElementById('disconnectedNodesList').innerHTML = tableHtml;
+                    document.getElementById('disconnectedNodesContent').classList.remove('d-none');
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showError('Network error: ' + error.message);
+            });
+    }
+
+    function createNodesTable(nodes, type) {
+        if (!nodes || nodes.length === 0) {
+            return `<div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No ${type} nodes found.
+            </div>`;
+        }
+
+        let tableHtml = `
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Device Name</th>
+                        <th>IP Address</th>`;
+        
+        if (type === 'connected') {
+            tableHtml += `<th>Hop Count</th>`;
+        } else {
+            tableHtml += `<th>Status</th>`;
+        }
+        
+        tableHtml += `</tr>
+                </thead>
+                <tbody>`;
+
+        nodes.forEach((node, index) => {
+            const statusClass = type === 'connected' ? 'text-success' : 'text-danger';
+            const statusIcon = type === 'connected' ? 'fa-check-circle' : 'fa-times-circle';
+            
+            tableHtml += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${node.device_name}</strong></td>
+                    <td><code>${node.ip}</code></td>`;
+            
+            if (type === 'connected') {
+                tableHtml += `<td>
+                    <span class="badge bg-info">${node.hop_count}</span>
+                </td>`;
+            } else {
+                tableHtml += `<td>
+                    <span class="${statusClass}">
+                        <i class="fas ${statusIcon} me-1"></i>
+                        ${node.status}
+                    </span>
+                </td>`;
+            }
+            
+            tableHtml += `</tr>`;
+        });
+
+        tableHtml += `</tbody></table>`;
+        return tableHtml;
+    }
+}
