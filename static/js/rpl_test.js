@@ -631,10 +631,10 @@ function updateDeviceInTable(deviceResult) {
 function updateSummaryFromTable() {
     const rows = document.querySelectorAll('#resultsTableBody tr[data-device-ip]');
     let successCount = 0;
-    let totalCount = rows.length;
+    let skippedCount = 0;
 
+    // Count successes and skipped rows. Skipped rows must not be included in the summary denominator.
     rows.forEach(row => {
-        // Find Status column (should contain Success/Failed/Error/Offline etc.)
         const cells = row.cells;
         let statusText = '';
 
@@ -643,23 +643,32 @@ function updateSummaryFromTable() {
             statusText = cells[cells.length - 2].textContent.trim(); // Status is usually second to last
         }
 
+        // If the row is explicitly Skipped, increment skippedCount and skip it from further calculations
+        if (statusText && statusText.toLowerCase().includes('skipped')) {
+            skippedCount++;
+            return; // skip this row
+        }
+
         // Consider success if status is not Failed, Error, or Offline
         if (statusText && statusText !== 'Failed' && statusText !== 'Error' && statusText !== 'Offline') {
             successCount++;
         }
     });
 
-    if (totalCount > 0) {
-        const TOTAL_DEVICES = 28; // Total devices in FAN11_FSK_IPV6
-        const successRate = (successCount / TOTAL_DEVICES * 100).toFixed(1);
+    // Compute displayed denominator excluding skipped nodes
+    const TOTAL_DEVICES = 28; // Total devices in FAN11_FSK_IPV6
+    const consideredDevices = Math.max(0, TOTAL_DEVICES - skippedCount);
+
+    if (consideredDevices > 0) {
+        const successRate = (successCount / consideredDevices * 100).toFixed(1);
         const summaryEl = document.getElementById('testSummary');
         if (summaryEl) {
-            // Get original summary to preserve duration if it exists
-            const originalSummary = summaryEl.textContent;
+            // Preserve duration if it exists in the current summary text
+            const originalSummary = summaryEl.textContent || '';
             const durationMatch = originalSummary.match(/ - Duration: (.+)$/);
             const durationStr = durationMatch ? ` - Duration: ${durationMatch[1]}` : '';
 
-            summaryEl.textContent = `SUMMARY: ${successCount}/${TOTAL_DEVICES} devices responded (${successRate}% success rate)${durationStr}`;
+            summaryEl.textContent = `SUMMARY: ${successCount}/${consideredDevices} devices responded (${successRate}% success rate)${durationStr}`;
         }
     }
 }
