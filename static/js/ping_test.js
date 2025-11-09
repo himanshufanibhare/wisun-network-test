@@ -144,10 +144,14 @@ function setupSocketHandlers() {
     });
 
     socket.on('device_retest_result', function (data) {
+        console.log(`🔄 DEBUG: Received device_retest_result event:`, data);
         if (data.test_type === currentTestType) {
+            console.log(`🔄 DEBUG: Processing retest result for ${currentTestType}`);
             updateDeviceInTable(data.device_result);
             // Recalculate and update summary after retest
             updateSummaryFromTable();
+        } else {
+            console.log(`🔄 DEBUG: Ignoring retest result for different test type: ${data.test_type} (current: ${currentTestType})`);
         }
     });
 
@@ -608,7 +612,7 @@ function checkTestStatus() {
 }
 
 function retestDevice(ip, label, deviceId) {
-    console.log(`Retesting ping for device: ${label} (${ip})`);
+    console.log(`🔄 DEBUG: Starting retest for device: ${label} (${ip}) with deviceId: ${deviceId}`);
 
     const formData = new FormData(document.getElementById('testForm'));
     const parameters = {};
@@ -619,6 +623,7 @@ function retestDevice(ip, label, deviceId) {
             parameters[key] = value;
         }
     }
+    console.log(`🔄 DEBUG: Retest parameters:`, parameters);
 
     const button = document.getElementById(`retest_${deviceId}`);
     if (button) {
@@ -664,12 +669,17 @@ function resetRetestButton(deviceId, ip, label) {
 }
 
 function updateDeviceInTable(deviceResult) {
+    console.log(`🔄 DEBUG: updateDeviceInTable called with:`, deviceResult);
     updateResultsTable(deviceResult);
     showSuccess(`Ping retest completed for ${deviceResult.label}`);
-    // Update summary after retest
-    updateSummaryFromTable();
+    
+    // Update summary after retest with a small delay to ensure DOM is updated
+    setTimeout(() => {
+        updateSummaryFromTable();
+    }, 100);
     
     // Trigger report regeneration with updated results
+    console.log('🔄 DEBUG: Calling regenerateReportWithUpdatedResults from updateDeviceInTable');
     regenerateReportWithUpdatedResults();
 }
 
@@ -714,10 +724,21 @@ function showNotification(message, type) {
 
 // Regenerate report files with updated test results
 function regenerateReportWithUpdatedResults() {
+    console.log('🔄 DEBUG: Starting report regeneration...');
     const outputFormat = document.querySelector('select[name="output_format"]').value;
+    console.log(`🔄 DEBUG: Output format: ${outputFormat}`);
     
     // Get current test results from table
     const tableResults = getCurrentTableResults();
+    console.log('🔄 DEBUG: Table results extracted:', tableResults);
+    
+    const payload = {
+        test_type: currentTestType,
+        output_format: outputFormat,
+        results: tableResults,
+        summary: document.getElementById('testSummary').textContent
+    };
+    console.log('🔄 DEBUG: Sending payload to backend:', payload);
     
     // Send to backend to regenerate report
     return fetch('/api/regenerate_report', {
@@ -725,20 +746,19 @@ function regenerateReportWithUpdatedResults() {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            test_type: currentTestType,
-            output_format: outputFormat,
-            results: tableResults,
-            summary: document.getElementById('testSummary').textContent
-        })
+        body: JSON.stringify(payload)
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('🔄 DEBUG: Backend response status:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('🔄 DEBUG: Backend response data:', data);
         if (data.success) {
-            console.log('Ping report regenerated successfully');
+            console.log('✅ Ping report regenerated successfully');
             return data;
         } else {
-            console.error('Failed to regenerate ping report:', data.error);
+            console.error('❌ Failed to regenerate ping report:', data.error);
             throw new Error(data.error);
         }
     })
@@ -750,34 +770,49 @@ function regenerateReportWithUpdatedResults() {
 
 // Extract current results from the table
 function getCurrentTableResults() {
+    console.log('🔍 DEBUG: Starting getCurrentTableResults()');
     const rows = document.querySelectorAll('#resultsTableBody tr[data-device-ip]');
+    console.log(`🔍 DEBUG: Found ${rows.length} data rows in table`);
     const results = [];
     
-    rows.forEach(row => {
+    rows.forEach((row, index) => {
         const cells = row.cells;
+        console.log(`🔍 DEBUG: Row ${index + 1} has ${cells.length} cells`);
         
-        // Get packet loss to determine status
-        const lossCell = cells[5]; // Loss % column
+        // Log all cell contents for debugging
+        for (let i = 0; i < cells.length; i++) {
+            console.log(`🔍 DEBUG: Row ${index + 1}, Cell ${i}: "${cells[i].textContent.trim()}"`);
+        }
+        
+        // Get packet loss to determine status - Loss % is now column 6
+        const lossCell = cells[6]; // Loss % column
         let lossPercent = 100;
         if (lossCell) {
             const lossText = lossCell.textContent.trim();
             lossPercent = parseFloat(lossText.replace('%', ''));
+            console.log(`🔍 DEBUG: Row ${index + 1} loss text: "${lossText}", parsed: ${lossPercent}`);
         }
         
-        results.push({
+        const resultObject = {
             sr_no: parseInt(cells[0].textContent) || 0,
             ip: cells[1].textContent,
             device_label: cells[2].textContent, // Use device_label to match backend expectations
-            packets_tx: parseInt(cells[3].textContent) || 0,
-            packets_rx: parseInt(cells[4].textContent) || 0,
+            hop_count: cells[3].textContent,
+            packets_tx: parseInt(cells[4].textContent) || 0,
+            packets_rx: parseInt(cells[5].textContent) || 0,
             loss_percent: isNaN(lossPercent) ? 100 : lossPercent,
-            min_rtt: cells[6] ? cells[6].textContent : 'N/A',
-            max_rtt: cells[7] ? cells[7].textContent : 'N/A',
-            avg_rtt: cells[8] ? cells[8].textContent : 'N/A',
-            hop_count: cells[9] ? cells[9].textContent : 'N/A',
+            min_rtt: cells[7] ? cells[7].textContent : 'N/A',
+            max_rtt: cells[8] ? cells[8].textContent : 'N/A',
+            avg_rtt: cells[9] ? cells[9].textContent : 'N/A',
+            mdev_time: cells[10] ? cells[10].textContent : 'N/A',
             status: lossPercent < 100 ? 'Success' : 'Failed'
-        });
+        };
+        
+        console.log(`🔍 DEBUG: Row ${index + 1} result object:`, resultObject);
+        results.push(resultObject);
     });
+    
+    console.log(`🔍 DEBUG: Final results array (${results.length} items):`, results);
     
     return results;
 }
@@ -790,7 +825,7 @@ function updateSummaryFromTable() {
     let skippedCount = 0;
 
     rows.forEach(row => {
-        const lossCell = row.cells[5]; // Loss % column
+        const lossCell = row.cells[6]; // Loss % column - fixed from cells[5] to cells[6]
         if (lossCell) {
             const lossText = lossCell.textContent.trim();
             if (lossText === '-') {

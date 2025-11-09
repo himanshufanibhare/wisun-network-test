@@ -609,8 +609,11 @@ function resetRetestButton(deviceId, ip, label) {
 function updateDeviceInTable(deviceResult) {
     updateResultsTable(deviceResult);
     showSuccess(`Availability retest completed for ${deviceResult.label}`);
-    // Update summary after retest
-    updateSummaryFromTable();
+    
+    // Update summary after retest with a small delay to ensure DOM is updated
+    setTimeout(() => {
+        updateSummaryFromTable();
+    }, 100);
     
     // Trigger report regeneration with updated results
     regenerateReportWithUpdatedResults();
@@ -738,28 +741,45 @@ function getCurrentTableResults() {
     rows.forEach(row => {
         const cells = row.cells;
         
-        // Extract availability data from cells
-        let isAvailable = false;
-        let statusText = 'Unknown';
+        // Extract connection status from the Connection Status column (index 5)
+        let connectionStatus = 'Unknown';
+        let status = 'Failed';
         
-        // Check availability percentage (cell 3)
-        const availabilityCell = cells[3];
-        if (availabilityCell) {
-            const availText = availabilityCell.textContent.trim();
-            const availPercent = parseFloat(availText.replace('%', ''));
-            isAvailable = !isNaN(availPercent) && availPercent > 0;
-            statusText = isAvailable ? 'Available' : 'Unavailable';
+        if (cells.length > 5) {
+            const statusCell = cells[5]; // Connection Status column
+            
+            // Check if the status cell contains a badge
+            const badge = statusCell.querySelector('.badge');
+            if (badge) {
+                const badgeText = badge.textContent.trim();
+                if (badgeText.includes('Connected') || badgeText.includes('Available')) {
+                    connectionStatus = 'Connected';
+                    status = 'Success';
+                } else if (badgeText.includes('Failed') || badgeText.includes('Unavailable')) {
+                    connectionStatus = 'Disconnected';
+                    status = 'Failed';
+                }
+            } else {
+                // Fallback: check full cell text content
+                const cellText = statusCell.textContent.trim();
+                if (cellText.includes('Connected') || cellText.includes('Available') || cellText.includes('Success')) {
+                    connectionStatus = 'Connected';
+                    status = 'Success';
+                } else if (cellText.includes('Failed') || cellText.includes('Unavailable') || cellText.includes('Error')) {
+                    connectionStatus = 'Disconnected';
+                    status = 'Failed';
+                }
+            }
         }
         
         results.push({
             sr_no: parseInt(cells[0].textContent) || 0,
             ip: cells[1].textContent,
             device_label: cells[2].textContent, // Use device_label to match backend expectations
-            availability_percent: availabilityCell ? availabilityCell.textContent : '0%',
-            uptime: cells[4] ? cells[4].textContent : 'N/A',
-            downtime: cells[5] ? cells[5].textContent : 'N/A',
-            hop_count: cells[6] ? cells[6].textContent : 'N/A',
-            status: statusText
+            hop_count: cells[3] ? cells[3].textContent : 'N/A',
+            availability: cells[4] ? cells[4].textContent : 'N/A',
+            status: status,
+            connection_status: connectionStatus
         });
     });
     

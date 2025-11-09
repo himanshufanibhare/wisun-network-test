@@ -628,8 +628,11 @@ function updateDeviceInTable(deviceResult) {
     
     updateResultsTable(deviceResult);
     showSuccess(`Disconnections retest completed for ${deviceResult.label}`);
-    // Update summary after retest
-    updateSummaryFromTable();
+    
+    // Update summary after retest with a small delay to ensure DOM is updated
+    setTimeout(() => {
+        updateSummaryFromTable();
+    }, 100);
     
     // Trigger report regeneration with updated results
     regenerateReportWithUpdatedResults();

@@ -612,35 +612,51 @@ def download_logs(test_type):
 def regenerate_report():
     """Regenerate report file with updated test results"""
     data = request.get_json()
+    print(f"🔄 DEBUG BACKEND: Received regenerate_report request")
+    print(f"🔄 DEBUG BACKEND: Request data: {data}")
+    
     test_type = data.get('test_type')
     output_format = data.get('output_format', 'txt')
     results = data.get('results', [])
     summary = data.get('summary', '')
     
+    print(f"🔄 DEBUG BACKEND: test_type={test_type}, output_format={output_format}")
+    print(f"🔄 DEBUG BACKEND: results count={len(results)}")
+    print(f"🔄 DEBUG BACKEND: First result: {results[0] if results else 'None'}")
+    
     if not test_type or test_type not in TEST_CONFIGS:
+        print(f"❌ DEBUG BACKEND: Invalid test type: {test_type}")
         return jsonify({'error': 'Invalid test type'}), 400
     
     try:
         # Initialize result writer for the report
         result_writer = TestResultWriter(test_type, output_format)
+        print(f"🔄 DEBUG BACKEND: Created TestResultWriter for {test_type} in {output_format} format")
         
         # Clear existing content and write updated results
         result_writer.clear_file()
+        print(f"🔄 DEBUG BACKEND: Cleared existing file content")
         
         # Write header information
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        result_writer.write_header({
+        header_data = {
             'test_name': TEST_CONFIGS[test_type]['name'],
             'timestamp': timestamp,
             'total_devices': len(results)
-        })
+        }
+        print(f"🔄 DEBUG BACKEND: Writing header: {header_data}")
+        result_writer.write_header(header_data)
         
         # Write each result
-        for result in results:
+        print(f"🔄 DEBUG BACKEND: Writing {len(results)} results...")
+        for i, result in enumerate(results):
+            print(f"🔄 DEBUG BACKEND: Processing result {i+1}: {result}")
             mapped_result = map_device_result_for_writer(result, test_type)
+            print(f"🔄 DEBUG BACKEND: Mapped result {i+1}: {mapped_result}")
             result_writer.append_result(mapped_result)
         
         # Write summary
+        print(f"🔄 DEBUG BACKEND: Writing summary: {summary}")
         result_writer.write_summary(summary)
         
         # Add Wi-SUN tree if available
@@ -1078,29 +1094,35 @@ def get_wisun_tree():
                               text=True, 
                               timeout=30)
         
-        # Get device count from hop_counts.json (excluding root node)
+        # Get connected device count (only devices in FAN11_FSK_IPV6 with hop > 0)
+        from tests.ip import FAN11_FSK_IPV6
         hop_count_data = load_hop_counts()
-        device_count = len(hop_count_data) if hop_count_data else 0
         
-        # Try to get total_devices from hop_counts.json file
-        try:
-            hop_count_file = os.path.join(os.path.dirname(__file__), 'hop_counts.json')
-            if os.path.exists(hop_count_file):
-                with open(hop_count_file, 'r') as f:
-                    hop_data = json.load(f)
-                    device_count = hop_data.get('total_devices', device_count)
-        except Exception:
-            pass  # Use device_count from hop_counts dict if file reading fails
-        
-        # Subtract 1 to exclude the root node (border router at hop count 0)
-        actual_device_count = max(0, device_count - 1)
+        # Calculate connected nodes count (excluding border router and unknown devices)
+        connected_count = 0
+        if hop_count_data:
+            # Extract the actual hop_counts dictionary
+            if isinstance(hop_count_data, dict) and 'hop_counts' in hop_count_data:
+                actual_hop_counts = hop_count_data['hop_counts']
+            else:
+                actual_hop_counts = hop_count_data
+            
+            # Create set of known device IPs
+            fan_ips_lower = set(ip.lower() for ip in FAN11_FSK_IPV6.values())
+            
+            # Count only devices that are:
+            # 1. In hop_counts with hop > 0 (exclude border router)
+            # 2. In FAN11_FSK_IPV6 (ignore unknown devices)
+            for ip_lower, hop_count in actual_hop_counts.items():
+                if hop_count > 0 and ip_lower in fan_ips_lower:
+                    connected_count += 1
         
         if result.returncode == 0:
             return jsonify({
                 'success': True, 
                 'output': result.stdout.strip(),
                 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'device_count': actual_device_count
+                'device_count': connected_count
             })
         else:
             error_msg = result.stderr.strip() if result.stderr else "Command failed"
@@ -1318,7 +1340,7 @@ def download_wisun_tree(format_type):
 
 @app.route('/api/wisun_nodes/connected', methods=['GET'])
 def get_connected_nodes():
-    """Get list of connected Wi-SUN nodes"""
+    """Get list of connected Wi-SUN nodes (excluding border router)"""
     try:
         from tests.ip import FAN11_FSK_IPV6
         hop_counts_data = load_hop_counts()
@@ -1329,29 +1351,35 @@ def get_connected_nodes():
         else:
             actual_hop_counts = hop_counts_data
         
-        connected_nodes = []
-        total_nodes = len(FAN11_FSK_IPV6)
+        # Create reverse mapping of IP to device name
+        ip_to_device = {ip.lower(): name for name, ip in FAN11_FSK_IPV6.items()}
+        fan_ips_lower = set(ip.lower() for ip in FAN11_FSK_IPV6.values())
         
-        for device_name, device_ip in FAN11_FSK_IPV6.items():
-            # Convert to lowercase for comparison with hop_counts.json
-            ip_lower = device_ip.lower()
-            
-            if ip_lower in actual_hop_counts:
-                hop_count = actual_hop_counts[ip_lower]
+        connected_nodes = []
+        
+        # Only include devices that are:
+        # 1. In hop_counts.json with hop > 0 (exclude border router)
+        # 2. In FAN11_FSK_IPV6 (ignore unknown devices)
+        for ip_lower, hop_count in actual_hop_counts.items():
+            if hop_count > 0 and ip_lower in fan_ips_lower:  # Exclude border router and unknown devices
+                device_name = ip_to_device[ip_lower]
                 connected_nodes.append({
                     'device_name': device_name,
-                    'ip': device_ip,
+                    'ip': ip_lower.upper(),  # Convert back to uppercase for display
                     'hop_count': hop_count
                 })
         
         # Sort by hop count, then by device name
         connected_nodes.sort(key=lambda x: (x['hop_count'], x['device_name']))
         
+        # Calculate total expected nodes (devices in FAN11_FSK_IPV6)
+        total_expected_nodes = len(FAN11_FSK_IPV6)
+        
         return jsonify({
             'success': True,
             'nodes': connected_nodes,
             'count': len(connected_nodes),
-            'total_nodes': total_nodes,
+            'total_nodes': total_expected_nodes,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         })
         
@@ -1363,7 +1391,7 @@ def get_connected_nodes():
 
 @app.route('/api/wisun_nodes/disconnected', methods=['GET'])
 def get_disconnected_nodes():
-    """Get list of disconnected Wi-SUN nodes"""
+    """Get list of disconnected Wi-SUN nodes (devices in FAN11_FSK_IPV6 but not connected)"""
     try:
         from tests.ip import FAN11_FSK_IPV6
         hop_counts_data = load_hop_counts()
@@ -1375,12 +1403,10 @@ def get_disconnected_nodes():
             actual_hop_counts = hop_counts_data
         
         disconnected_nodes = []
-        total_nodes = len(FAN11_FSK_IPV6)
         
+        # Find devices that are in FAN11_FSK_IPV6 but NOT in hop_counts.json
         for device_name, device_ip in FAN11_FSK_IPV6.items():
-            # Convert to lowercase for comparison with hop_counts.json
             ip_lower = device_ip.lower()
-            
             if ip_lower not in actual_hop_counts:
                 disconnected_nodes.append({
                     'device_name': device_name,
@@ -1391,11 +1417,14 @@ def get_disconnected_nodes():
         # Sort by device name
         disconnected_nodes.sort(key=lambda x: x['device_name'])
         
+        # Calculate total expected nodes (devices in FAN11_FSK_IPV6)  
+        total_expected_nodes = len(FAN11_FSK_IPV6)
+        
         return jsonify({
             'success': True,
             'nodes': disconnected_nodes,
             'count': len(disconnected_nodes),
-            'total_nodes': total_nodes,
+            'total_nodes': total_expected_nodes,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         })
         
