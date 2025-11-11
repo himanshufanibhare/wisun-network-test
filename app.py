@@ -17,7 +17,6 @@ from io import BytesIO
 # Import test modules
 from tests import pingTest, rssiTest, rplTest, disconnectionsTest, availabilityTest
 from tests.hopCountUtils import refresh_hop_counts, load_hop_counts, get_hop_count_for_ip, get_hop_count_summary
-from tests.ip import FAN11_FSK_IPV6
 from utils.test_result_writer import TestResultWriter
 from utils.report_generator import (generate_txt_report, generate_pdf_report, generate_word_report, 
                                    generate_json_report, generate_csv_report, generate_xml_report,
@@ -28,42 +27,26 @@ def map_device_result_for_writer(device_result, test_type):
     mapped_result = device_result.copy()
     
     if test_type == 'ping':
-        # Map ping-specific fields - keep original field names that match ping test output
+        # Map ping-specific fields
+        if 'min_time' in device_result:
+            mapped_result['min_rtt'] = device_result['min_time']
+        if 'max_time' in device_result:
+            mapped_result['max_rtt'] = device_result['max_time']
+        if 'avg_time' in device_result:
+            mapped_result['avg_rtt'] = device_result['avg_time']
+        if 'mdev_time' in device_result:
+            mapped_result['mdev'] = device_result['mdev_time']
         if 'label' in device_result:
             mapped_result['device_label'] = device_result['label']
         
-        # Set connection status based on loss percentage (be defensive about types)
+        # Set connection status based on loss percentage
         if 'loss_percent' in device_result:
-            # Check if this is a skipped device first
-            if device_result.get('connection_status') == 'Skipped':
-                mapped_result['connection_status'] = 'Skipped'
+            if device_result['loss_percent'] == 0:
+                mapped_result['connection_status'] = 'Connected'
+            elif device_result['loss_percent'] < 100:
+                mapped_result['connection_status'] = 'Unstable'
             else:
-                # Coerce loss_percent to a numeric value when possible, otherwise treat as missing
-                lp_raw = device_result.get('loss_percent')
-                lp_val = None
-                try:
-                    # If lp_raw is '-' or None this will be treated as missing
-                    if lp_raw is None or lp_raw == '-':
-                        lp_val = None
-                    elif isinstance(lp_raw, (int, float)):
-                        lp_val = lp_raw
-                    else:
-                        # Try to parse numeric string
-                        lp_val = float(str(lp_raw))
-                except Exception:
-                    lp_val = None
-
-                if lp_val is None:
-                    # No numeric loss info -> treat as Skipped if explicitly marked, otherwise Unknown
-                    if device_result.get('connection_status') == 'Skipped' or lp_raw == '-':
-                        mapped_result['connection_status'] = 'Skipped'
-                    else:
-                        mapped_result['connection_status'] = 'Unknown'
-                else:
-                    if lp_val < 100:  # Any packets received = Connected
-                        mapped_result['connection_status'] = 'Connected'
-                    else:
-                        mapped_result['connection_status'] = 'Failed'
+                mapped_result['connection_status'] = 'Failed'
         else:
             mapped_result['connection_status'] = 'Unknown'
     
@@ -95,22 +78,8 @@ def map_device_result_for_writer(device_result, test_type):
         # Map disconnections-specific fields
         if 'label' in device_result:
             mapped_result['device_label'] = device_result['label']
-        
-        # Map connection status based on status field
-        if 'status' in device_result:
-            if 'RESPONSE ✅' in device_result['status']:
-                mapped_result['connection_status'] = 'Connected'
-            elif 'NO RESPONSE ❌' in device_result['status']:
-                mapped_result['connection_status'] = 'Disconnected'
-            else:
-                mapped_result['connection_status'] = 'Unknown'
-        elif 'connection_status' in device_result:
-            # Use existing connection_status if available
-            mapped_result['connection_status'] = device_result['connection_status']
-        else:
-            mapped_result['connection_status'] = 'Unknown'
-            
         # Keep disconnected_total field and remove unwanted fields
+        mapped_result.pop('status', None)
         mapped_result.pop('response_time', None) 
         mapped_result.pop('link_status', None)
     
@@ -235,6 +204,20 @@ def test_page(test_type):
     
     template_name = template_mapping.get(test_type, 'test.html')
     return render_template(template_name, test_type=test_type, config=config)
+
+@app.route('/restart_test')
+def restart_test_page():
+    """Border Router restart test page"""
+    print("🔄 Accessing restart test page...")
+    # Refresh hop counts for current state
+    try:
+        refresh_hop_counts()
+        hop_counts = load_hop_counts()
+        print(f"✅ Updated hop counts for restart test: {len(hop_counts)} devices")
+    except Exception as e:
+        print(f"⚠️ Warning: Failed to refresh hop counts on restart test page access: {e}")
+    
+    return render_template('restart_test.html')
 
 @app.route('/api/start_test', methods=['POST'])
 def start_test():
@@ -498,13 +481,9 @@ def run_single_device_test(test_type, ip, label, params):
         elif test_type == 'disconnections':
             timeout = params.get('timeout', 120)
             
-            print(f"DEBUG: Starting single device disconnections test for {ip} ({label}) with timeout {timeout}s")
-            
             # Import and use disconnections test function
             from tests.disconnectionsTest import check_disconnected_total
             response = check_disconnected_total(ip, timeout, None)  # No stop callback for single device retest
-            
-            print(f"DEBUG: Disconnections test completed for {ip}. Response: {response is not None}")
             
             # Format device result for frontend
             device_result = {
@@ -512,11 +491,8 @@ def run_single_device_test(test_type, ip, label, params):
                 'label': label,
                 'hop_count': hop_count,
                 'disconnected_total': response if response is not None else 'No response',
-                'status': 'RESPONSE ✅' if response is not None else 'NO RESPONSE ❌',
-                'connection_status': 'Connected' if response is not None else 'Disconnected'
+                'status': 'RESPONSE ✅' if response is not None else 'NO RESPONSE ❌'
             }
-            
-            print(f"DEBUG: Emitting device_retest_result for {ip}")
             
             # Emit result via socket
             socketio.emit('device_retest_result', {
@@ -561,10 +537,6 @@ def run_single_device_test(test_type, ip, label, params):
             })
             
     except Exception as e:
-        print(f"DEBUG: Exception in run_single_device_test for {test_type} ({ip}): {str(e)}")
-        import traceback
-        traceback.print_exc()
-        
         socketio.emit('device_retest_error', {
             'test_type': test_type,
             'ip': ip,
@@ -608,162 +580,42 @@ def download_logs(test_type):
     
     return "Log file not found", 404
 
-@app.route('/api/regenerate_report', methods=['POST'])
-def regenerate_report():
-    """Regenerate report file with updated test results"""
-    data = request.get_json()
-    print(f"🔄 DEBUG BACKEND: Received regenerate_report request")
-    print(f"🔄 DEBUG BACKEND: Request data: {data}")
-    
-    test_type = data.get('test_type')
-    output_format = data.get('output_format', 'txt')
-    results = data.get('results', [])
-    summary = data.get('summary', '')
-    
-    print(f"🔄 DEBUG BACKEND: test_type={test_type}, output_format={output_format}")
-    print(f"🔄 DEBUG BACKEND: results count={len(results)}")
-    print(f"🔄 DEBUG BACKEND: First result: {results[0] if results else 'None'}")
-    
-    if not test_type or test_type not in TEST_CONFIGS:
-        print(f"❌ DEBUG BACKEND: Invalid test type: {test_type}")
-        return jsonify({'error': 'Invalid test type'}), 400
-    
-    try:
-        # Initialize result writer for the report
-        result_writer = TestResultWriter(test_type, output_format)
-        print(f"🔄 DEBUG BACKEND: Created TestResultWriter for {test_type} in {output_format} format")
-        
-        # Clear existing content and write updated results
-        result_writer.clear_file()
-        print(f"🔄 DEBUG BACKEND: Cleared existing file content")
-        
-        # Write header information
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        header_data = {
-            'test_name': TEST_CONFIGS[test_type]['name'],
-            'timestamp': timestamp,
-            'total_devices': len(results)
-        }
-        print(f"🔄 DEBUG BACKEND: Writing header: {header_data}")
-        result_writer.write_header(header_data)
-        
-        # Write each result
-        print(f"🔄 DEBUG BACKEND: Writing {len(results)} results...")
-        for i, result in enumerate(results):
-            print(f"🔄 DEBUG BACKEND: Processing result {i+1}: {result}")
-            mapped_result = map_device_result_for_writer(result, test_type)
-            print(f"🔄 DEBUG BACKEND: Mapped result {i+1}: {mapped_result}")
-            result_writer.append_result(mapped_result)
-        
-        # Write summary
-        print(f"🔄 DEBUG BACKEND: Writing summary: {summary}")
-        result_writer.write_summary(summary)
-        
-        # Add Wi-SUN tree if available
-        try:
-            from tests.hopCountTest import get_wisun_tree
-            print(f"DEBUG: Attempting to get Wi-SUN tree for regenerated report")
-            tree_output = get_wisun_tree()
-            if tree_output and tree_output.strip():
-                print(f"DEBUG: Adding Wi-SUN tree to regenerated report (length: {len(tree_output)})")
-                result_writer.add_wisun_tree(tree_output, timestamp)
-            else:
-                print(f"DEBUG: No Wi-SUN tree output received for regenerated report")
-        except Exception as e:
-            print(f"Warning: Failed to add Wi-SUN tree to report: {e}")
-        
-        # Finalize the file
-        result_writer.finalize()
-        
-        # Update test status with new result file
-        if test_type in test_status:
-            test_status[test_type]['result_file'] = result_writer.get_file_path()
-        
-        return jsonify({
-            'success': True, 
-            'message': f'Report regenerated successfully in {output_format.upper()} format',
-            'file_path': result_writer.get_file_path()
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Failed to regenerate report: {str(e)}'}), 500
-
 @app.route('/api/test_result/download/<test_type>/<format>')
 def download_test_result(test_type, format):
-    """Download test result file in specified format - always serves the most up-to-date version"""
-    try:
-        print(f"DEBUG: Download request for {test_type} in {format} format")
-        print(f"DEBUG: Current test_status for {test_type}: {test_status.get(test_type, 'Not found')}")
-        
-        # First check if we have a current result file
-        if test_type in test_status and 'result_file' in test_status[test_type]:
-            result_file = test_status[test_type]['result_file']
-            print(f"DEBUG: Found result_file in test_status: {result_file}")
-            print(f"DEBUG: File exists: {os.path.exists(result_file)}")
-            
-            if os.path.exists(result_file):
-                # Check if the file format matches what's requested
-                if result_file.endswith(f'.{format}') or (format == 'word' and result_file.endswith('.docx')):
-                    print(f"DEBUG: Serving existing up-to-date file: {result_file}")
-                    return send_file(result_file, as_attachment=True)
-                else:
-                    print(f"DEBUG: File format mismatch. Requested: {format}, File: {result_file}")
-            else:
-                print(f"DEBUG: Result file does not exist: {result_file}")
-        else:
-            print(f"DEBUG: No result_file found in test_status for {test_type}")
-        
-        # If no matching file found, try to find the latest file in the reports directory
-        reports_dir = f"reports/{format}"
-        print(f"DEBUG: Searching in directory: {reports_dir}")
-        
-        if os.path.exists(reports_dir):
-            files = [f for f in os.listdir(reports_dir) if f.startswith(f"{test_type}_test_")]
-            print(f"DEBUG: Found {len(files)} files in {reports_dir}")
-            
-            if files:
-                # Get the most recent file
-                latest_file = max(files, key=lambda x: os.path.getctime(os.path.join(reports_dir, x)))
-                file_path = os.path.join(reports_dir, latest_file)
-                print(f"DEBUG: Latest file found: {latest_file}")
-                
-                if os.path.exists(file_path):
-                    print(f"DEBUG: Serving latest file from directory: {file_path}")
-                    return send_file(file_path, as_attachment=True)
-                else:
-                    print(f"DEBUG: Latest file does not exist: {file_path}")
-        else:
-            print(f"DEBUG: Reports directory does not exist: {reports_dir}")
-        
-        print(f"DEBUG: No report file found for {test_type} in {format} format")
-        return f"No {format.upper()} test result file found for {test_type}", 404
-        
-    except Exception as e:
-        print(f"ERROR: Failed to download test result: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return f"Error downloading {format.upper()} report: {str(e)}", 500
+    """Download test result file in specified format"""
+    if test_type in test_status and 'result_file' in test_status[test_type]:
+        result_file = test_status[test_type]['result_file']
+        if os.path.exists(result_file):
+            return send_file(result_file, as_attachment=True)
+    
+    # If no result file, try to find the latest file in the reports directory
+    reports_dir = f"reports/{format}"
+    if os.path.exists(reports_dir):
+        files = [f for f in os.listdir(reports_dir) if f.startswith(f"{test_type}_test_")]
+        if files:
+            # Get the most recent file
+            latest_file = max(files, key=lambda x: os.path.getctime(os.path.join(reports_dir, x)))
+            file_path = os.path.join(reports_dir, latest_file)
+            if os.path.exists(file_path):
+                return send_file(file_path, as_attachment=True)
+    
+    return f"No {format.upper()} test result file found for {test_type}", 404
 
 def run_test(test_type, params, output_format='txt'):
     """Run the actual test in background"""
     
     # Initialize result writer
     result_writer = TestResultWriter(test_type, output_format)
-    initial_file_path = result_writer.get_file_path()
-    test_status[test_type]['result_file'] = initial_file_path
-    print(f"DEBUG: Initialized result_writer for {test_type} with output_format: {output_format}")
-    print(f"DEBUG: Initial file path set to: {initial_file_path}")
+    test_status[test_type]['result_file'] = result_writer.get_file_path()
     
     # Refresh hop counts before starting test
     print(f"Refreshing hop counts before {test_type} test...")
     try:
         refresh_hop_counts()
-        hop_counts_data = load_hop_counts()
-        hop_counts = hop_counts_data.get('hop_counts', {}) if hop_counts_data else {}
+        hop_counts = load_hop_counts()
         print(f"Loaded hop counts for {len(hop_counts)} devices")
     except Exception as e:
         print(f"Warning: Failed to refresh hop counts: {e}")
-        hop_counts_data = {}
         hop_counts = {}
     
     def progress_callback(current, total, device_name, device_result=None):
@@ -773,22 +625,16 @@ def run_test(test_type, params, output_format='txt'):
         
         # Add hop count to device result if available
         if device_result and 'ip' in device_result:
-            device_result['hop_count'] = get_hop_count_for_ip(device_result['ip'], hop_counts_data)
-            print(f"DEBUG: progress_callback - device_result before mapping: {device_result}")
+            device_result['hop_count'] = get_hop_count_for_ip(device_result['ip'], hop_counts)
             
             # Map device result fields for TestResultWriter compatibility
             mapped_result = map_device_result_for_writer(device_result, test_type)
-            print(f"DEBUG: progress_callback - mapped_result: {mapped_result}")
             
             # Write result to the chosen format file
             try:
-                print(f"DEBUG: progress_callback - calling result_writer.append_result")
                 result_writer.append_result(mapped_result)
-                print(f"DEBUG: progress_callback - result_writer.append_result completed successfully")
             except Exception as e:
                 print(f"Warning: Failed to write result to {output_format} file: {e}")
-                import traceback
-                traceback.print_exc()
         
         # Prepare socket data
         socket_data = {
@@ -824,8 +670,8 @@ def run_test(test_type, params, output_format='txt'):
             # Track test start time
             test_start_time = time.time()
             
-            # Run the ping test and capture success/fail/skipped counts
-            success, fail, skipped = pingTest.ping_all_devices(log_file, progress_callback, stop_callback, count, timeout, pause_callback)
+            # Run the ping test and capture success/fail counts
+            success, fail = pingTest.ping_all_devices(log_file, progress_callback, stop_callback, count, timeout, pause_callback)
             
             # Calculate total test duration
             test_end_time = time.time()
@@ -833,22 +679,17 @@ def run_test(test_type, params, output_format='txt'):
             duration_minutes = int(total_duration // 60)
             duration_seconds = int(total_duration % 60)
             
-            total_run = success + fail + skipped
-            tested = success + fail  # Only devices actually tested (not skipped)
-            total_devices = len(FAN11_FSK_IPV6)  # Total devices in IP list
+            total_run = success + fail
             if duration_minutes > 0:
                 duration_str = f"{duration_minutes}m {duration_seconds}s"
             else:
                 duration_str = f"{duration_seconds}s"
             
-            # Always show success out of total devices, remove skipped count from summary
-            success_rate = (success / total_devices * 100) if total_devices > 0 else 0
-            summary = f"SUMMARY: {success}/{total_devices} devices reachable ({success_rate:.1f}% success rate) - Duration: {duration_str}"
+            summary = f"SUMMARY: {success}/{total_run} devices reachable ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate) - Duration: {duration_str}"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
-            test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
             test_status[test_type]['duration'] = total_duration
             
@@ -857,164 +698,65 @@ def run_test(test_type, params, output_format='txt'):
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
-
-            # Track test start time
-            test_start_time = time.time()
-            
-            success, fail, skipped = rssiTest.fetch_rsl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
-            
-            # Calculate test duration
-            test_end_time = time.time()
-            total_duration = test_end_time - test_start_time
-            duration_minutes = int(total_duration // 60)
-            duration_seconds = int(total_duration % 60)
-            
-            if duration_minutes > 0:
-                duration_str = f"{duration_minutes}m {duration_seconds}s"
-            else:
-                duration_str = f"{duration_seconds}s"
-            
-            total_run = success + fail + skipped
-            tested = success + fail  # Only devices actually tested (not skipped)
-            total_devices = len(FAN11_FSK_IPV6)  # Total devices in IP list
-            # Always show success out of total devices, remove skipped count from summary
-            success_rate = (success / total_devices * 100) if total_devices > 0 else 0
-            summary = f"SUMMARY: {success}/{total_devices} devices responded ({success_rate:.1f}% success rate) - Duration: {duration_str}"
+            success, fail = rssiTest.fetch_rsl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            total_run = success + fail
+            summary = f"SUMMARY: {success}/{total_run} devices responded ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate)"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
-            test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
-            test_status[test_type]['duration'] = total_duration
             
         elif test_type == 'rpl':
             timeout = params.get('timeout', 100)
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
-
-            # Track test start time
-            test_start_time = time.time()
-            
-            success, fail, skipped = rplTest.fetch_rpl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
-            
-            # Calculate test duration
-            test_end_time = time.time()
-            total_duration = test_end_time - test_start_time
-            duration_minutes = int(total_duration // 60)
-            duration_seconds = int(total_duration % 60)
-            
-            if duration_minutes > 0:
-                duration_str = f"{duration_minutes}m {duration_seconds}s"
-            else:
-                duration_str = f"{duration_seconds}s"
-            
-            total_run = success + fail + skipped
-            tested = success + fail  # Only devices actually tested (not skipped)
-            total_devices = len(FAN11_FSK_IPV6)  # Total devices in IP list
-            # Always show success out of total devices, remove skipped count from summary
-            success_rate = (success / total_devices * 100) if total_devices > 0 else 0
-            summary = f"SUMMARY: {success}/{total_devices} devices responded ({success_rate:.1f}% success rate) - Duration: {duration_str}"
+            success, fail = rplTest.fetch_rpl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            total_run = success + fail
+            summary = f"SUMMARY: {success}/{total_run} devices responded ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate)"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
-            test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
-            test_status[test_type]['duration'] = total_duration
             
         elif test_type == 'disconnections':
             timeout = params.get('timeout', 120)
-            # Record start time for duration calculation
-            start_time = time.time()
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
-            success, fail, skipped = disconnectionsTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
-            # Calculate duration
-            end_time = time.time()
-            total_duration = end_time - start_time
-            total_run = success + fail + skipped
-            tested = success + fail  # Only devices actually tested (not skipped)
-            total_devices = len(FAN11_FSK_IPV6)  # Total devices in IP list
-            # Always show success out of total devices, remove skipped count from summary
-            success_rate = (success / total_devices * 100) if total_devices > 0 else 0
-            # Format duration for display
-            duration_minutes = int(total_duration // 60)
-            duration_seconds = int(total_duration % 60)
-            duration_str = f"{duration_minutes}m {duration_seconds}s"
-            summary = f"SUMMARY: {success}/{total_devices} devices responded ({success_rate:.1f}% success rate)\nDuration: {duration_str}"
+            success, fail = disconnectionsTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            total_run = success + fail
+            summary = f"SUMMARY: {success}/{total_run} devices responded ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate)"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
-            test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
-            test_status[test_type]['duration'] = total_duration
             
         elif test_type == 'availability':
             timeout = params.get('timeout', 120)
-            # Record start time for duration calculation
-            start_time = time.time()
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
-            success, fail, skipped = availabilityTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
-            # Calculate duration
-            end_time = time.time()
-            total_duration = end_time - start_time
-            total_run = success + fail + skipped
-            tested = success + fail  # Only devices actually tested (not skipped)
-            total_devices = len(FAN11_FSK_IPV6)  # Total devices in IP list
-            # Always show success out of total devices, remove skipped count from summary
-            success_rate = (success / total_devices * 100) if total_devices > 0 else 0
-            # Format duration for display
-            duration_minutes = int(total_duration // 60)
-            duration_seconds = int(total_duration % 60)
-            duration_str = f"{duration_minutes}m {duration_seconds}s"
-            summary = f"SUMMARY: {success}/{total_devices} devices available ({success_rate:.1f}% success rate)\nDuration: {duration_str}"
+            success, fail = availabilityTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            total_run = success + fail
+            summary = f"SUMMARY: {success}/{total_run} devices available ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate)"
             # store summary and counts in test_status for frontend
             test_status[test_type]['summary'] = summary
             test_status[test_type]['success'] = success
             test_status[test_type]['fail'] = fail
-            test_status[test_type]['skipped'] = skipped
             test_status[test_type]['total_run'] = total_run
-            test_status[test_type]['duration'] = total_duration
             
         # Write summary and finalize the result file
         if test_type in test_status and 'summary' in test_status[test_type]:
             try:
-                result_writer.write_summary(test_status[test_type]['summary'])
-                
-                # Add Wi-SUN tree to the report
-                try:
-                    from tests.hopCountTest import get_wisun_tree
-                    print(f"DEBUG: Attempting to get Wi-SUN tree for {test_type}")
-                    tree_output = get_wisun_tree()
-                    if tree_output and tree_output.strip():
-                        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        print(f"DEBUG: Adding Wi-SUN tree to report (length: {len(tree_output)})")
-                        result_writer.add_wisun_tree(tree_output, timestamp)
-                    else:
-                        print(f"DEBUG: No Wi-SUN tree output received")
-                except Exception as e:
-                    print(f"Warning: Failed to add Wi-SUN tree to report: {e}")
-                
+                result_writer.append_summary(test_status[test_type]['summary'])
                 final_file_path = result_writer.finalize()
                 print(f"Test results saved to: {final_file_path}")
-                
-                # Update test status with the final file path
-                if test_type in test_status:
-                    test_status[test_type]['result_file'] = final_file_path
-                    print(f"DEBUG: Updated result_file in test_status to: {final_file_path}")
-                
             except Exception as e:
                 print(f"Warning: Failed to finalize result file: {e}")
-                # Remove result_file from status if finalization failed
-                if test_type in test_status and 'result_file' in test_status[test_type]:
-                    del test_status[test_type]['result_file']
-                    print(f"DEBUG: Removed result_file from test_status due to finalization error")
             
     except Exception as e:
         print(f"DEBUG: Exception in run_test for {test_type}: {str(e)}")
@@ -1094,35 +836,29 @@ def get_wisun_tree():
                               text=True, 
                               timeout=30)
         
-        # Get connected device count (only devices in FAN11_FSK_IPV6 with hop > 0)
-        from tests.ip import FAN11_FSK_IPV6
+        # Get device count from hop_counts.json (excluding root node)
         hop_count_data = load_hop_counts()
+        device_count = len(hop_count_data) if hop_count_data else 0
         
-        # Calculate connected nodes count (excluding border router and unknown devices)
-        connected_count = 0
-        if hop_count_data:
-            # Extract the actual hop_counts dictionary
-            if isinstance(hop_count_data, dict) and 'hop_counts' in hop_count_data:
-                actual_hop_counts = hop_count_data['hop_counts']
-            else:
-                actual_hop_counts = hop_count_data
-            
-            # Create set of known device IPs
-            fan_ips_lower = set(ip.lower() for ip in FAN11_FSK_IPV6.values())
-            
-            # Count only devices that are:
-            # 1. In hop_counts with hop > 0 (exclude border router)
-            # 2. In FAN11_FSK_IPV6 (ignore unknown devices)
-            for ip_lower, hop_count in actual_hop_counts.items():
-                if hop_count > 0 and ip_lower in fan_ips_lower:
-                    connected_count += 1
+        # Try to get total_devices from hop_counts.json file
+        try:
+            hop_count_file = os.path.join(os.path.dirname(__file__), 'hop_counts.json')
+            if os.path.exists(hop_count_file):
+                with open(hop_count_file, 'r') as f:
+                    hop_data = json.load(f)
+                    device_count = hop_data.get('total_devices', device_count)
+        except Exception:
+            pass  # Use device_count from hop_counts dict if file reading fails
+        
+        # Subtract 1 to exclude the root node (border router at hop count 0)
+        actual_device_count = max(0, device_count - 1)
         
         if result.returncode == 0:
             return jsonify({
                 'success': True, 
                 'output': result.stdout.strip(),
                 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'device_count': connected_count
+                'device_count': actual_device_count
             })
         else:
             error_msg = result.stderr.strip() if result.stderr else "Command failed"
@@ -1340,37 +1076,36 @@ def download_wisun_tree(format_type):
 
 @app.route('/api/wisun_nodes/connected', methods=['GET'])
 def get_connected_nodes():
-    """Get list of connected Wi-SUN nodes (excluding border router)"""
+    """Get list of connected Wi-SUN nodes with pole numbers"""
     try:
-        from tests.ip import FAN11_FSK_IPV6
+        from tests.ip import FAN11_FSK_IPV6, get_pole_number
         hop_counts_data = load_hop_counts()
         
         # Extract the actual hop_counts dictionary from the loaded data
         if isinstance(hop_counts_data, dict) and 'hop_counts' in hop_counts_data:
             actual_hop_counts = hop_counts_data['hop_counts']
         else:
-            actual_hop_counts = hop_counts_data
-        
-        # Create reverse mapping of IP to device name
-        ip_to_device = {ip.lower(): name for name, ip in FAN11_FSK_IPV6.items()}
-        fan_ips_lower = set(ip.lower() for ip in FAN11_FSK_IPV6.values())
+            actual_hop_counts = hop_counts_data or {}
         
         connected_nodes = []
         
-        # Only include devices that are:
-        # 1. In hop_counts.json with hop > 0 (exclude border router)
-        # 2. In FAN11_FSK_IPV6 (ignore unknown devices)
-        for ip_lower, hop_count in actual_hop_counts.items():
-            if hop_count > 0 and ip_lower in fan_ips_lower:  # Exclude border router and unknown devices
-                device_name = ip_to_device[ip_lower]
-                connected_nodes.append({
-                    'device_name': device_name,
-                    'ip': ip_lower.upper(),  # Convert back to uppercase for display
-                    'hop_count': hop_count
-                })
+        # Find devices that are in hop_counts.json (connected devices)
+        for device_name, device_ip in FAN11_FSK_IPV6.items():
+            ip_lower = device_ip.lower()
+            if ip_lower in actual_hop_counts:
+                hop_count = actual_hop_counts[ip_lower]
+                # Exclude border router (hop count 0) and unknown devices
+                if hop_count > 0:
+                    pole_number = get_pole_number(device_name)
+                    connected_nodes.append({
+                        'device_name': device_name,
+                        'ip': device_ip,
+                        'hop_count': hop_count,
+                        'pole_number': pole_number
+                    })
         
-        # Sort by hop count, then by device name
-        connected_nodes.sort(key=lambda x: (x['hop_count'], x['device_name']))
+        # Sort by device name
+        connected_nodes.sort(key=lambda x: x['device_name'])
         
         # Calculate total expected nodes (devices in FAN11_FSK_IPV6)
         total_expected_nodes = len(FAN11_FSK_IPV6)
@@ -1391,9 +1126,9 @@ def get_connected_nodes():
 
 @app.route('/api/wisun_nodes/disconnected', methods=['GET'])
 def get_disconnected_nodes():
-    """Get list of disconnected Wi-SUN nodes (devices in FAN11_FSK_IPV6 but not connected)"""
+    """Get list of disconnected Wi-SUN nodes with pole numbers"""
     try:
-        from tests.ip import FAN11_FSK_IPV6
+        from tests.ip import FAN11_FSK_IPV6, get_pole_number
         hop_counts_data = load_hop_counts()
         
         # Extract the actual hop_counts dictionary from the loaded data
@@ -1408,9 +1143,11 @@ def get_disconnected_nodes():
         for device_name, device_ip in FAN11_FSK_IPV6.items():
             ip_lower = device_ip.lower()
             if ip_lower not in actual_hop_counts:
+                pole_number = get_pole_number(device_name)
                 disconnected_nodes.append({
                     'device_name': device_name,
                     'ip': device_ip,
+                    'pole_number': pole_number,
                     'status': 'Disconnected'
                 })
         

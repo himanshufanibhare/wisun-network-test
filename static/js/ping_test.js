@@ -1041,26 +1041,19 @@ function initializeWisunTreeFeatures() {
             </div>`;
         }
 
-        let rawText = "Sr No".padEnd(8) + "Device Name".padEnd(25) + "IP Address".padEnd(42);
-        if (type === 'connected') {
-            rawText += "Hop Count\n";
-        } else {
-            rawText += "Status\n";
-        }
+        let rawText = "Sr No".padEnd(8) + "Device Name".padEnd(25) + "IP Address".padEnd(42) + "Hop Count".padEnd(15) + "Pole No\n";
 
         // Add separator line
-        rawText += "─".repeat(85) + "\n";
+        rawText += "─".repeat(100) + "\n";
 
         nodes.forEach((node, index) => {
             const serialNo = `${index + 1}.`.padEnd(8);
             const deviceName = node.device_name.padEnd(25);
             const ipAddress = node.ip.padEnd(42);
+            const hopCount = (node.hop_count !== undefined ? node.hop_count.toString() : '-').padEnd(15);
+            const poleNumber = node.pole_number || 'Unknown';
             
-            if (type === 'connected') {
-                rawText += `${serialNo}${deviceName}${ipAddress}${node.hop_count}\n`;
-            } else {
-                rawText += `${serialNo}${deviceName}${ipAddress}${node.status}\n`;
-            }
+            rawText += `${serialNo}${deviceName}${ipAddress}${hopCount}${poleNumber}\n`;
         });
 
         return `<pre class="bg-dark text-light p-3 rounded" style="max-height: 500px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre;">${rawText}</pre>`;
@@ -1080,15 +1073,10 @@ function initializeWisunTreeFeatures() {
                     <tr>
                         <th>#</th>
                         <th>Device Name</th>
-                        <th>IP Address</th>`;
-        
-        if (type === 'connected') {
-            tableHtml += `<th>Hop Count</th>`;
-        } else {
-            tableHtml += `<th>Status</th>`;
-        }
-        
-        tableHtml += `</tr>
+                        <th>IP Address</th>
+                        <th>Hop Count</th>
+                        <th>Pole No</th>
+                    </tr>
                 </thead>
                 <tbody>`;
 
@@ -1100,22 +1088,12 @@ function initializeWisunTreeFeatures() {
                 <tr>
                     <td>${index + 1}</td>
                     <td><strong>${node.device_name}</strong></td>
-                    <td><code>${node.ip}</code></td>`;
-            
-            if (type === 'connected') {
-                tableHtml += `<td>
-                    <span class="badge bg-info">${node.hop_count}</span>
-                </td>`;
-            } else {
-                tableHtml += `<td>
-                    <span class="${statusClass}">
-                        <i class="fas ${statusIcon} me-1"></i>
-                        ${node.status}
-                    </span>
-                </td>`;
-            }
-            
-            tableHtml += `</tr>`;
+                    <td><code>${node.ip}</code></td>
+                    <td>
+                        <span class="badge bg-info">${node.hop_count !== undefined ? node.hop_count : '-'}</span>
+                    </td>
+                    <td><span class="badge bg-secondary">${node.pole_number || 'Unknown'}</span></td>
+                </tr>`;
         });
 
         tableHtml += `</tbody></table>`;

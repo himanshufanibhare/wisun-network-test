@@ -981,29 +981,67 @@ function initializeWisunTreeFeatures() {
             </div>`;
         }
 
-        let rawText = "Sr No".padEnd(8) + "Device Name".padEnd(25) + "IP Address".padEnd(42);
-        if (type === 'connected') {
-            rawText += "Hop Count\n";
-        } else {
-            rawText += "Status\n";
-        }
+        let rawText = "Sr No".padEnd(8) + "Device Name".padEnd(25) + "IP Address".padEnd(42) + "Hop Count".padEnd(15) + "Pole No\n";
 
         // Add separator line
-        rawText += "─".repeat(85) + "\n";
+        rawText += "─".repeat(100) + "\n";
 
         nodes.forEach((node, index) => {
             const serialNo = `${index + 1}.`.padEnd(8);
             const deviceName = node.device_name.padEnd(25);
             const ipAddress = node.ip.padEnd(42);
+            const hopCount = (node.hop_count !== undefined ? node.hop_count.toString() : '-').padEnd(15);
+            const poleNumber = node.pole_number || 'Unknown';
             
-            if (type === 'connected') {
-                rawText += `${serialNo}${deviceName}${ipAddress}${node.hop_count}\n`;
-            } else {
-                rawText += `${serialNo}${deviceName}${ipAddress}${node.status}\n`;
-            }
+            rawText += `${serialNo}${deviceName}${ipAddress}${hopCount}${poleNumber}\n`;
         });
 
         return `<pre class="bg-dark text-light p-3 rounded" style="max-height: 500px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre;">${rawText}</pre>`;
+    }
+
+    function createNodesTable(nodes, type) {
+        if (!nodes || nodes.length === 0) {
+            return `<div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No ${type} nodes found.
+            </div>`;
+        }
+
+        let tableHtml = `
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Device Name</th>
+                        <th>IP Address</th>
+                        <th>Hop Count</th>
+                        <th>Pole No</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        nodes.forEach((node, index) => {
+            const statusClass = type === 'connected' ? 'text-success' : 'text-danger';
+            const statusIcon = type === 'connected' ? 'fa-check-circle' : 'fa-times-circle';
+            
+            tableHtml += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td class="${statusClass}">
+                        <i class="fas ${statusIcon} me-1"></i>
+                        ${node.device_name}
+                    </td>
+                    <td class="font-monospace">${node.ip}</td>
+                    <td>${node.hop_count !== undefined ? node.hop_count : '-'}</td>
+                    <td>${node.pole_number || 'Unknown'}</td>
+                </tr>`;
+        });
+
+        tableHtml += `
+                </tbody>
+            </table>`;
+
+        return tableHtml;
     }
 }
 document.addEventListener('DOMContentLoaded', function () {

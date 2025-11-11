@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Restart Test - Wi-SUN Network{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/restart_test.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="text-primary mb-1">
+                        <i class="fas fa-sync-alt me-2"></i>Border Router Restart Test
+                    </h1>
+                    <p class="text-muted mb-0">Monitor node reconnection behavior after BR restart</p>
+                </div>
+                <div class="text-end">
+                    <div class="badge bg-info text-wrap" style="font-size: 0.9rem;">
+                        <i class="fas fa-clock me-1"></i>Test Duration: <span id="testDuration">00:00:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Control Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Border Router Control & Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- BR Events Timeline -->
+                        <div class="col-md-5">
+                            <h6><i class="fas fa-timeline me-1"></i>BR Events Timeline</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered table-hover table-compact table-mini">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th width="12%">#</th>
+                                            <th width="28%">Action</th>
+                                            <th width="35%">Time</th>
+                                            <th width="25%">Duration</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="brEventsTableBody">
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted">
+                                                <small>No events yet</small>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Gap -->
+                        <div class="col-md-1"></div>
+
+                        <!-- Control Buttons -->
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-gamepad me-1"></i>BR Control</h6>
+                            <!-- First row: Start, Stop -->
+                            <div class="d-flex gap-1 mb-2">
+                                <button id="startBRBtn" class="btn btn-success btn-sm flex-fill" onclick="startBR()">
+                                    <i class="fas fa-play me-1"></i>Start
+                                </button>
+                                <button id="stopBRBtn" class="btn btn-danger btn-sm flex-fill" onclick="stopBR()">
+                                    <i class="fas fa-stop me-1"></i>Stop
+                                </button>
+                            </div>
+                            <!-- Second row: Reset -->
+                            <div class="d-flex gap-1">
+                                <button id="resetTestBtn" class="btn btn-outline-secondary btn-sm flex-fill" onclick="resetTest()">
+                                    <i class="fas fa-refresh me-1"></i>Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Node Connection Monitoring Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-success">
+                <div class="card-header bg-success text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-network-wired me-2"></i>Node Connection Monitoring</h5>
+                        <div>
+                            <span class="badge bg-light text-dark me-2">
+                                Connected: <span id="connectedCount">0</span>/28
+                            </span>
+                            <button class="btn btn-sm btn-outline-light" onclick="refreshNodeStatus()">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Node Connection Table -->
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped table-hover table-bordered" id="nodeConnectionTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th width="8%"><i class="fas fa-hashtag me-1"></i>Sr</th>
+                                    <th width="18%"><i class="fas fa-tag me-1"></i>Device</th>
+                                    <th width="25%"><i class="fas fa-globe me-1"></i>IP Address</th>
+                                    <th width="12%"><i class="fas fa-route me-1"></i>Hop</th>
+                                    <th width="15%"><i class="fas fa-clock me-1"></i>Connect Time</th>
+                                    <th width="12%"><i class="fas fa-stopwatch me-1"></i>Since Start</th>
+                                    <th width="10%"><i class="fas fa-check-circle me-1"></i>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nodeConnectionTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted">
+                                        <i class="fas fa-info-circle me-2"></i>Waiting for BR restart to begin monitoring...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Simple Summary -->
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="text-center">
+                <h6 class="text-muted mb-1">
+                    <strong>SUMMARY:</strong> 
+                    <span id="totalConnected">0</span>/28 Connected, 
+                    <span id="totalPending">28</span>/28 Pending
+                </h6>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/restart_test.js') }}"></script>
+<script>
+    // Initialize restart test page
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Restart test page loaded');
+        initializeRestartTest();
+    });
+</script>
+{% endblock %}
