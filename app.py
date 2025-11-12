@@ -670,8 +670,8 @@ def run_test(test_type, params, output_format='txt'):
             # Track test start time
             test_start_time = time.time()
             
-            # Run the ping test and capture success/fail counts
-            success, fail = pingTest.ping_all_devices(log_file, progress_callback, stop_callback, count, timeout, pause_callback)
+            # Run the ping test and capture success/fail/skipped counts
+            success, fail, skipped = pingTest.ping_all_devices(log_file, progress_callback, stop_callback, count, timeout, pause_callback)
             
             # Calculate total test duration
             test_end_time = time.time()
@@ -698,7 +698,7 @@ def run_test(test_type, params, output_format='txt'):
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
-            success, fail = rssiTest.fetch_rsl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            success, fail, skipped = rssiTest.fetch_rsl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
             total_run = success + fail
             summary = f"SUMMARY: {success}/{total_run} devices responded ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate)"
             # store summary and counts in test_status for frontend
@@ -712,7 +712,7 @@ def run_test(test_type, params, output_format='txt'):
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
-            success, fail = rplTest.fetch_rpl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            success, fail, skipped = rplTest.fetch_rpl_for_all(log_file, progress_callback, stop_callback, timeout, pause_callback)
             total_run = success + fail
             summary = f"SUMMARY: {success}/{total_run} devices responded ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate)"
             # store summary and counts in test_status for frontend
@@ -726,7 +726,7 @@ def run_test(test_type, params, output_format='txt'):
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
-            success, fail = disconnectionsTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            success, fail, skipped = disconnectionsTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
             total_run = success + fail
             summary = f"SUMMARY: {success}/{total_run} devices responded ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate)"
             # store summary and counts in test_status for frontend
@@ -740,7 +740,7 @@ def run_test(test_type, params, output_format='txt'):
             # Provide a pause callback that reads the pause_flags for this test
             def pause_callback():
                 return pause_flags.get(test_type, False)
-            success, fail = availabilityTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
+            success, fail, skipped = availabilityTest.check_all_devices(log_file, progress_callback, stop_callback, timeout, pause_callback)
             total_run = success + fail
             summary = f"SUMMARY: {success}/{total_run} devices available ({(success / total_run * 100) if total_run>0 else 0:.1f}% success rate)"
             # store summary and counts in test_status for frontend
@@ -854,12 +854,17 @@ def get_wisun_tree():
         actual_device_count = max(0, device_count - 1)
         
         if result.returncode == 0:
-            return jsonify({
+            response = jsonify({
                 'success': True, 
                 'output': result.stdout.strip(),
                 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'device_count': actual_device_count
             })
+            # Add cache-busting headers to ensure fresh data
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+            return response
         else:
             error_msg = result.stderr.strip() if result.stderr else "Command failed"
             # Check for common D-Bus errors
@@ -1110,13 +1115,18 @@ def get_connected_nodes():
         # Calculate total expected nodes (devices in FAN11_FSK_IPV6)
         total_expected_nodes = len(FAN11_FSK_IPV6)
         
-        return jsonify({
+        response = jsonify({
             'success': True,
             'nodes': connected_nodes,
             'count': len(connected_nodes),
             'total_nodes': total_expected_nodes,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         })
+        # Add cache-busting headers to ensure fresh data
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
         
     except Exception as e:
         return jsonify({
@@ -1157,13 +1167,18 @@ def get_disconnected_nodes():
         # Calculate total expected nodes (devices in FAN11_FSK_IPV6)  
         total_expected_nodes = len(FAN11_FSK_IPV6)
         
-        return jsonify({
+        response = jsonify({
             'success': True,
             'nodes': disconnected_nodes,
             'count': len(disconnected_nodes),
             'total_nodes': total_expected_nodes,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         })
+        # Add cache-busting headers to ensure fresh data
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
         
     except Exception as e:
         return jsonify({

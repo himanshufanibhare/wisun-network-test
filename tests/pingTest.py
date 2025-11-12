@@ -169,7 +169,7 @@ def ping_all_devices(log_path=None, progress_callback=None, stop_callback=None, 
             # Check for stop while paused
             if stop_callback and stop_callback():
                 logger.info("Test stopped by user while paused")
-                return success, fail
+                return success, fail, skipped
 
         current_device += 1
         
