@@ -80,8 +80,8 @@ body {
 }
 
 /* Ping test table styling */
+/* Slightly larger table font for readability */
 #resultsTable {
-    font-size: 0.9em;
     margin-bottom: 0;
 }
 
@@ -90,27 +90,33 @@ body {
     text-align: center;
     vertical-align: middle;
     white-space: nowrap;
-    padding: 0.4rem 0.3rem;
-    font-size: 0.9em;
-    background-color: #f8f9fa;
 }
 
 #resultsTable td {
     text-align: center;
     vertical-align: middle;
-    padding: 0.3rem 0.25rem;
-    line-height: 1.2;
 }
 
-#resultsTable .ip-column {
-    font-family: 'Courier New', monospace;
+/* IP column now uses the same font as device label and black color */
+#resultsTable .ip-address,
+#resultsTable .ip-address code {
+    font-family: inherit;
+    color: #000000;
     font-weight: 500;
-    color: var(--ping-primary);
 }
 
+/* Device label styling (consistent with IP) */
+#resultsTable .device-label {
+    font-family: inherit;
+    color: #000000;
+    font-weight: 500;
+}
+
+/* Hop count and metric columns slightly reduced weight but larger than before */
+#resultsTable .hop-count,
 #resultsTable .metric-column {
-    font-family: 'Courier New', monospace;
-    font-size: 0.85em;
+    font-family: inherit;
+    font-size: 0.98em;
     font-weight: 500;
 }
 
@@ -128,15 +134,7 @@ body {
 }
 
 /* Ping test control buttons */
-.btn-primary {
-    background-color: var(--ping-primary);
-    border-color: var(--ping-primary);
-}
-
-.btn-primary:hover {
-    background-color: #0052a3;
-    border-color: #0052a3;
-}
+/* Using Bootstrap default btn-primary color */
 
 /* Ping-specific spinner */
 .spinner-border-primary {

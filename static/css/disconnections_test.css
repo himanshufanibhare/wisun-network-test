@@ -76,7 +76,6 @@ body {
 
 /* Disconnections test table styling */
 #resultsTable {
-    font-size: 0.9em;
     margin-bottom: 0;
 }
 
@@ -85,16 +84,11 @@ body {
     text-align: center;
     vertical-align: middle;
     white-space: nowrap;
-    padding: 0.4rem 0.3rem;
-    font-size: 0.9em;
-    background-color: #f8f9fa;
 }
 
 #resultsTable td {
     text-align: center;
     vertical-align: middle;
-    padding: 0.3rem 0.25rem;
-    line-height: 1.2;
 }
 
 #resultsTable .ip-column {
@@ -115,15 +109,7 @@ body {
 }
 
 /* Disconnections test control buttons */
-.btn-primary {
-    background-color: var(--disconnections-primary);
-    border-color: var(--disconnections-primary);
-}
-
-.btn-primary:hover {
-    background-color: #d91a72;
-    border-color: #d91a72;
-}
+/* Using Bootstrap default btn-primary color */
 
 /* Disconnections-specific spinner */
 .spinner-border-pink {

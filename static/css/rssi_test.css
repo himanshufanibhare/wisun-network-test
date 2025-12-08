@@ -79,7 +79,6 @@ body {
 
 /* RSSI test table styling */
 #resultsTable {
-    font-size: 0.9em;
     margin-bottom: 0;
 }
 
@@ -88,16 +87,11 @@ body {
     text-align: center;
     vertical-align: middle;
     white-space: nowrap;
-    padding: 0.4rem 0.3rem;
-    font-size: 0.9em;
-    background-color: #f8f9fa;
 }
 
 #resultsTable td {
     text-align: center;
     vertical-align: middle;
-    padding: 0.3rem 0.25rem;
-    line-height: 1.2;
 }
 
 #resultsTable .ip-column {
@@ -134,15 +128,7 @@ body {
 }
 
 /* RSSI test control buttons */
-.btn-primary {
-    background-color: var(--rssi-primary);
-    border-color: var(--rssi-primary);
-}
-
-.btn-primary:hover {
-    background-color: #5a359a;
-    border-color: #5a359a;
-}
+/* Using Bootstrap default btn-primary color */
 
 /* RSSI-specific spinner */
 .spinner-border-purple {

@@ -342,6 +342,12 @@ function updateResultsTable(deviceResult) {
     const buttonText = isFailedTest ? 'Retry' : 'Retest';
     const buttonIcon = isFailedTest ? 'fa-exclamation-triangle' : 'fa-redo';
 
+    // Disable retest for skipped devices
+    const isSkipped = deviceResult.connection_status === 'Skipped' || deviceResult.status === 'Skipped' || deviceResult.skipped === true;
+    const finalButtonClass = isSkipped ? 'btn-secondary' : buttonClass;
+    const disabledAttr = isSkipped ? 'disabled' : '';
+    const dataSkippedAttr = isSkipped ? 'data-skipped="true"' : '';
+
     // Determine serial number: use provided index if present, otherwise compute based on rows
     let srNo = deviceResult.sr_no !== undefined ? deviceResult.sr_no : null;
     if (srNo === null) {
@@ -388,9 +394,9 @@ function updateResultsTable(deviceResult) {
             <td class="metric-column">${deviceResult.mdev_time || '-'}</td>
             <td class="${getStatusClass(deviceResult.loss_percent)}">${getStatusText(deviceResult.loss_percent)}</td>
             <td class="text-center">
-                <button class="btn ${buttonClass} btn-sm" 
+                <button class="btn ${finalButtonClass} btn-sm" 
                         onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')"
-                        id="retest_${deviceId}">
+                        id="retest_${deviceId}" ${disabledAttr} ${dataSkippedAttr}>
                     <i class="fas ${buttonIcon} me-1"></i>${buttonText}
                 </button>
             </td>
@@ -491,10 +497,21 @@ function testCompleted() {
         .then(res => res.json())
         .then(data => {
             const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary) {
-                summaryEl.textContent = data.summary;
-            } else {
-                summaryEl.textContent = 'Test completed.';
+            if (data) {
+                if (data.live_summary && summaryEl) {
+                    const live = {
+                        success: data.live_summary.success || 0,
+                        fail: data.live_summary.fail || 0,
+                        skipped: data.live_summary.skipped || 0,
+                        total: data.live_summary.total || data.total_devices || data.total_run || 0,
+                        duration: data.live_summary.duration || ''
+                    };
+                    summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    updateSummaryFromTable();
+                } else if (summaryEl) {
+                    summaryEl.textContent = data.summary || 'Test completed.';
+                }
             }
 
             const btn = document.getElementById('mainDownloadDropdown');
@@ -548,7 +565,22 @@ function testStopped() {
         .then(res => res.json())
         .then(data => {
             const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary) summaryEl.textContent = data.summary;
+            if (data) {
+                if (data.live_summary && summaryEl) {
+                    const live = {
+                        success: data.live_summary.success || 0,
+                        fail: data.live_summary.fail || 0,
+                        skipped: data.live_summary.skipped || 0,
+                        total: data.live_summary.total || data.total_devices || data.total_run || 0,
+                        duration: data.live_summary.duration || ''
+                    };
+                    summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    updateSummaryFromTable();
+                } else if (summaryEl) {
+                    summaryEl.textContent = data.summary || 'Test completed.';
+                }
+            }
             const btn = document.getElementById('mainDownloadDropdown');
             if (btn) btn.disabled = false;
         });
@@ -780,6 +812,9 @@ function retestDevice(ip, label, deviceId) {
 function resetRetestButton(deviceId, ip, label) {
     const button = document.getElementById(`retest_${deviceId}`);
     if (button) {
+        // Do not re-enable retest button for skipped devices
+        if (button.dataset && button.dataset.skipped === 'true') return;
+
         button.disabled = false;
         button.innerHTML = '<i class="fas fa-redo me-1"></i>Retest';
         button.className = 'btn btn-outline-secondary btn-sm';
@@ -802,6 +837,11 @@ function updateDeviceInTable(deviceResult) {
             const buttonClass = isFailedTest ? 'btn-warning' : 'btn-outline-secondary';
             const buttonText = isFailedTest ? 'Retry' : 'Retest';
             const buttonIcon = isFailedTest ? 'fa-exclamation-triangle' : 'fa-redo';
+            // Preserve skipped state: if device is skipped, keep retest disabled
+            const isSkipped = deviceResult.connection_status === 'Skipped' || deviceResult.status === 'Skipped' || deviceResult.skipped === true;
+            const finalButtonClass = isSkipped ? 'btn-secondary' : buttonClass;
+            const disabledAttr = isSkipped ? 'disabled' : '';
+            const dataSkippedAttr = isSkipped ? 'data-skipped="true"' : '';
 
             row.innerHTML = `
                 <td class="ip-column">${deviceResult.ip}</td>
@@ -815,9 +855,9 @@ function updateDeviceInTable(deviceResult) {
                 <td class="metric-column">${deviceResult.mdev_time || '-'}</td>
                 <td class="${getStatusClass(deviceResult.loss_percent)}">${getStatusText(deviceResult.loss_percent)}</td>
                 <td class="text-center">
-                    <button class="btn ${buttonClass} btn-sm" 
+                    <button class="btn ${finalButtonClass} btn-sm" 
                             onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')"
-                            id="retest_${deviceId}">
+                            id="retest_${deviceId}" ${disabledAttr} ${dataSkippedAttr}>
                         <i class="fas ${buttonIcon} me-1"></i>${buttonText}
                     </button>
                 </td>

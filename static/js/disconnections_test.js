@@ -70,6 +70,9 @@ function setupSocketHandlers() {
             if (data.device_result) {
                 updateResultsTable(data.device_result);
             }
+            if (data.live_summary) {
+                updateLiveSummary(data.live_summary);
+            }
             if (data.current !== undefined && data.total !== undefined) {
                 const spinnerText = document.getElementById('testSpinnerText');
                 if (spinnerText) {
@@ -97,7 +100,7 @@ function setupSocketHandlers() {
             if (data.results) {
                 populateResultsTable(data.results);
             }
-            testCompleted();
+            testCompleted(data.live_summary || data.status || null);
         }
     });
 
@@ -156,6 +159,17 @@ function setupSocketHandlers() {
             resetRetestButton(deviceId, data.ip, data.label);
         }
     });
+}
+
+function updateLiveSummary(live) {
+    const summaryEl = document.getElementById('testSummary');
+    if (!summaryEl) return;
+    const total = live.total || 0;
+    const success = live.success || 0;
+    const fail = live.fail || 0;
+    const skipped = live.skipped || 0;
+    const duration = live.duration || '';
+    summaryEl.textContent = `Summary : ${success}/${total} reachable , ${fail}/${total} failed, ${skipped}/${total} skipped, Duration : ${duration}`;
 }
 
 function startTest() {
@@ -362,6 +376,12 @@ function updateResultsTable(deviceResult) {
         statusHTML = `<span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> In Progress</span>`;
     }
 
+    // Disable retest for skipped devices
+    const isSkipped = deviceResult.connection_status === 'Skipped' || deviceResult.status === 'Skipped' || deviceResult.skipped === true;
+    const finalButtonClass = isSkipped ? 'btn-secondary' : buttonClass;
+    const disabledAttr = isSkipped ? 'disabled' : '';
+    const dataSkippedAttr = isSkipped ? 'data-skipped="true"' : '';
+
     const rowHTML = `
                                 <td class="srno">${srNo}</td>
                                 <td class="ip-address">${deviceResult.ip}</td>
@@ -372,7 +392,7 @@ function updateResultsTable(deviceResult) {
                                     ${statusHTML}
                                 </td>
                                 <td class="retest">
-                                    <button class="btn btn-sm ${buttonClass}" id="retest_${deviceId}" onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')">
+                                    <button class="btn btn-sm ${finalButtonClass}" id="retest_${deviceId}" onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')" ${disabledAttr} ${dataSkippedAttr}>
                                         <i class="fas ${buttonIcon}"></i> ${buttonText}
                                     </button>
                                 </td>
@@ -413,49 +433,58 @@ function testCompleted() {
     document.getElementById('stopBtn').disabled = true;
     document.getElementById('testSpinner').classList.add('d-none');
 
-    // Enable all retest buttons
+    // Enable all retest buttons except those marked as skipped
     const retestButtons = document.querySelectorAll('#resultsTableBody button[id^="retest_"]');
     retestButtons.forEach(button => {
-        button.disabled = false;
+        if (!button.dataset || button.dataset.skipped !== 'true') {
+            button.disabled = false;
+        }
     });
 
     showSuccess('Disconnections test completed successfully!');
 
+    const summaryEl = document.getElementById('testSummary');
+    if (arguments.length && arguments[0]) {
+        const status = arguments[0];
+        let live = status.live_summary || status;
+        if (status.live_success !== undefined && !status.success) {
+            live = {
+                success: status.live_success || 0,
+                fail: status.live_fail || 0,
+                skipped: status.live_skipped || 0,
+                total: status.total_devices || status.total_run || 0,
+                duration: status.duration || ''
+            };
+        }
+        if (summaryEl) summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+        const downloadBtn = document.getElementById('downloadReportBtn');
+        if (downloadBtn) {
+            downloadBtn.disabled = false;
+            const newBtn = downloadBtn.cloneNode(true);
+            downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
+            newBtn.addEventListener('click', function () {
+                const outputFormat = document.querySelector('select[name="output_format"]').value;
+                regenerateReportWithUpdatedResults()
+                    .then(() => window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`)
+                    .catch(() => window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`);
+            });
+        }
+        return;
+    }
+
     fetch(`/api/test_status/${currentTestType}`)
         .then(res => res.json())
         .then(data => {
-            const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary) {
-                summaryEl.textContent = data.summary;
-            } else {
-                summaryEl.textContent = 'Disconnections test completed.';
-            }
-
-            // Enable download button
-            const downloadBtn = document.getElementById('downloadReportBtn');
-            if (downloadBtn) {
-                downloadBtn.disabled = false;
-                // Remove old event listener by cloning
-                const newBtn = downloadBtn.cloneNode(true);
-                downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
-
-                newBtn.addEventListener('click', function () {
-                    // Get the selected output format from the form
-                    const outputFormat = document.querySelector('select[name="output_format"]').value;
-                    
-                    // First regenerate the report with latest table data, then download
-                    regenerateReportWithUpdatedResults()
-                        .then(() => {
-                            // After regeneration is complete, trigger download
-                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
-                        })
-                        .catch(error => {
-                            console.error('Failed to regenerate report before download:', error);
-                            // Still try to download the existing file
-                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
-                        });
-                });
-            }
+            const live = {
+                success: data.live_success || 0,
+                fail: data.live_fail || 0,
+                skipped: data.live_skipped || 0,
+                total: data.total_devices || data.total_run || 0,
+                duration: ''
+            };
+            if (summaryEl) summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+            const btn = document.getElementById('downloadReportBtn');
+            if (btn) btn.disabled = false;
         });
 }
 
@@ -495,7 +524,24 @@ function testStopped() {
         .then(res => res.json())
         .then(data => {
             const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary && summaryEl) summaryEl.textContent = data.summary;
+            if (data) {
+                if (data.live_summary && summaryEl) {
+                    const live = {
+                        success: data.live_summary.success || 0,
+                        fail: data.live_summary.fail || 0,
+                        skipped: data.live_summary.skipped || 0,
+                        total: data.live_summary.total || data.total_devices || data.total_run || 0,
+                        duration: data.live_summary.duration || ''
+                    };
+                    summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    updateSummaryFromTable();
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    updateSummaryFromTable();
+                } else if (summaryEl) {
+                    summaryEl.textContent = data.summary || 'Test completed.';
+                }
+            }
             const btn = document.getElementById('downloadLogBtn');
             if (btn) btn.disabled = false;
         });
@@ -504,7 +550,24 @@ function testStopped() {
         .then(res => res.json())
         .then(data => {
             const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary) summaryEl.textContent = data.summary;
+            if (data) {
+                if (data.live_summary && summaryEl) {
+                    const live = {
+                        success: data.live_summary.success || 0,
+                        fail: data.live_summary.fail || 0,
+                        skipped: data.live_summary.skipped || 0,
+                        total: data.live_summary.total || data.total_devices || data.total_run || 0,
+                        duration: data.live_summary.duration || ''
+                    };
+                    summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    updateSummaryFromTable();
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    updateSummaryFromTable();
+                } else if (summaryEl) {
+                    summaryEl.textContent = data.summary || 'Test completed.';
+                }
+            }
             const btn = document.getElementById('downloadLogBtn');
             if (btn) btn.disabled = false;
         });
@@ -611,6 +674,9 @@ function retestDevice(ip, label, deviceId) {
 function resetRetestButton(deviceId, ip, label) {
     const button = document.getElementById(`retest_${deviceId}`);
     if (button) {
+        // Do not re-enable retest button for skipped devices
+        if (button.dataset && button.dataset.skipped === 'true') return;
+
         button.disabled = false;
         button.innerHTML = '<i class="fas fa-redo me-1"></i>Retest';
         button.className = 'btn btn-outline-secondary btn-sm';
@@ -665,16 +731,15 @@ function updateSummaryFromTable() {
     });
 
     if (totalCount > 0) {
-        const TOTAL_DEVICES = 28; // Total devices in FAN11_FSK_IPV6
-        const successRate = (successCount / TOTAL_DEVICES * 100).toFixed(1);
         const summaryEl = document.getElementById('testSummary');
         if (summaryEl) {
             // Get original summary to preserve duration if it exists
             const originalSummary = summaryEl.textContent;
-            const durationMatch = originalSummary.match(/ - Duration: (.+)$/);
-            const durationStr = durationMatch ? ` - Duration: ${durationMatch[1]}` : '';
+            const durationMatch = originalSummary.match(/Duration: (.+)$/);
+            const durationStr = durationMatch ? `${durationMatch[1]}` : '';
 
-            summaryEl.textContent = `SUMMARY: ${successCount}/${TOTAL_DEVICES} devices responded (${successRate}% success rate)${durationStr}`;
+            const failCount = totalCount - successCount;
+            summaryEl.textContent = `Summary : ${successCount}/${totalCount} reachable , ${failCount}/${totalCount} failed, 0/${totalCount} skipped, Duration : ${durationStr}`;
         }
     }
 }

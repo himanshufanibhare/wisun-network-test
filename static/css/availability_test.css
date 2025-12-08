@@ -76,7 +76,6 @@ body {
 
 /* Availability test table styling */
 #resultsTable {
-    font-size: 0.9em;
     margin-bottom: 0;
 }
 
@@ -85,16 +84,11 @@ body {
     text-align: center;
     vertical-align: middle;
     white-space: nowrap;
-    padding: 0.4rem 0.3rem;
-    font-size: 0.9em;
-    background-color: #f8f9fa;
 }
 
 #resultsTable td {
     text-align: center;
     vertical-align: middle;
-    padding: 0.3rem 0.25rem;
-    line-height: 1.2;
 }
 
 #resultsTable .ip-column {
@@ -116,15 +110,7 @@ body {
 
 
 /* Availability test control buttons */
-.btn-primary {
-    background-color: var(--availability-primary);
-    border-color: var(--availability-primary);
-}
-
-.btn-primary:hover {
-    background-color: #e36209;
-    border-color: #e36209;
-}
+/* Using Bootstrap default btn-primary color */
 
 /* Availability-specific spinner */
 .spinner-border-orange {

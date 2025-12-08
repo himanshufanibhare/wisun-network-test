@@ -13,6 +13,7 @@ import json
 import subprocess
 from datetime import datetime
 from io import BytesIO
+import traceback
 
 # Import test modules
 from tests import pingTest, rssiTest, rplTest, disconnectionsTest, availabilityTest
@@ -28,27 +29,38 @@ def map_device_result_for_writer(device_result, test_type):
     
     if test_type == 'ping':
         # Map ping-specific fields
-        if 'min_time' in device_result:
-            mapped_result['min_rtt'] = device_result['min_time']
-        if 'max_time' in device_result:
-            mapped_result['max_rtt'] = device_result['max_time']
-        if 'avg_time' in device_result:
-            mapped_result['avg_rtt'] = device_result['avg_time']
-        if 'mdev_time' in device_result:
-            mapped_result['mdev'] = device_result['mdev_time']
-        if 'label' in device_result:
-            mapped_result['device_label'] = device_result['label']
-        
-        # Set connection status based on loss percentage
-        if 'loss_percent' in device_result:
-            if device_result['loss_percent'] == 0:
-                mapped_result['connection_status'] = 'Connected'
-            elif device_result['loss_percent'] < 100:
-                mapped_result['connection_status'] = 'Unstable'
+        # The TestResultWriter expects timing fields named 'min_time', 'max_time', 'avg_time', 'mdev_time'
+        # Accept multiple possible input names from various test sources and normalize them.
+        # min
+        mapped_result['min_time'] = device_result.get('min_time') if device_result.get('min_time') is not None else device_result.get('min_rtt') if device_result.get('min_rtt') is not None else device_result.get('min') if device_result.get('min') is not None else device_result.get('min_ms') if device_result.get('min_ms') is not None else device_result.get('min_rtt_ms')
+        # max
+        mapped_result['max_time'] = device_result.get('max_time') if device_result.get('max_time') is not None else device_result.get('max_rtt') if device_result.get('max_rtt') is not None else device_result.get('max')
+        # avg
+        mapped_result['avg_time'] = device_result.get('avg_time') if device_result.get('avg_time') is not None else device_result.get('avg_rtt') if device_result.get('avg_rtt') is not None else device_result.get('avg')
+        # mdev
+        mapped_result['mdev_time'] = device_result.get('mdev_time') if device_result.get('mdev_time') is not None else device_result.get('mdev') if device_result.get('mdev') is not None else device_result.get('mdev_ms')
+
+        # Ensure device_label is present
+        if 'label' in device_result and device_result.get('label'):
+            mapped_result['device_label'] = device_result.get('label')
+        elif 'device_label' not in mapped_result or not mapped_result.get('device_label'):
+            mapped_result['device_label'] = device_result.get('device_label', device_result.get('label', 'Unknown'))
+
+        # Set connection status based on loss percentage or existing connection_status
+        if 'connection_status' not in mapped_result or not mapped_result.get('connection_status'):
+            if 'loss_percent' in device_result and device_result.get('loss_percent') != '-' and device_result.get('loss_percent') is not None:
+                try:
+                    lp = float(device_result.get('loss_percent'))
+                    if lp == 0:
+                        mapped_result['connection_status'] = 'Connected'
+                    elif lp < 100:
+                        mapped_result['connection_status'] = 'Unstable'
+                    else:
+                        mapped_result['connection_status'] = 'Failed'
+                except Exception:
+                    mapped_result['connection_status'] = device_result.get('connection_status', 'Unknown')
             else:
-                mapped_result['connection_status'] = 'Failed'
-        else:
-            mapped_result['connection_status'] = 'Unknown'
+                mapped_result['connection_status'] = device_result.get('connection_status', 'Unknown')
     
     elif test_type == 'rssi' or test_type == 'rssl':
         # Map RSSI-specific fields
@@ -78,6 +90,9 @@ def map_device_result_for_writer(device_result, test_type):
         # Map disconnections-specific fields
         if 'label' in device_result:
             mapped_result['device_label'] = device_result['label']
+        # Normalize connection_status field if provided under other names
+        if 'connection_status' not in mapped_result or not mapped_result.get('connection_status'):
+            mapped_result['connection_status'] = device_result.get('connection_status') or device_result.get('status')
         # Keep disconnected_total field and remove unwanted fields
         mapped_result.pop('status', None)
         mapped_result.pop('response_time', None) 
@@ -87,6 +102,11 @@ def map_device_result_for_writer(device_result, test_type):
         # Map availability-specific fields
         if 'label' in device_result:
             mapped_result['device_label'] = device_result['label']
+        # Normalize availability_percent and connection_status
+        if 'availability_percent' not in mapped_result:
+            mapped_result['availability_percent'] = device_result.get('availability_percent') or device_result.get('availability')
+        if 'connection_status' not in mapped_result or not mapped_result.get('connection_status'):
+            mapped_result['connection_status'] = device_result.get('connection_status') or device_result.get('status')
         # Remove unwanted fields for availability tests
         mapped_result.pop('response_time', None)
         mapped_result.pop('uptime', None)
@@ -218,6 +238,69 @@ def restart_test_page():
         print(f"⚠️ Warning: Failed to refresh hop counts on restart test page access: {e}")
     
     return render_template('restart_test.html')
+
+@app.route('/distance_test')
+def distance_test_page():
+    """Distance calculation test page"""
+    print("🔄 Accessing distance calculation test page...")
+    return render_template('distance_test.html')
+
+@app.route('/api/distance/calculate', methods=['POST'])
+def calculate_distance():
+    """Calculate distances from Wi-SUN tree text"""
+    try:
+        from tests.distanceTest import DistanceTest
+        
+        data = request.get_json()
+        tree_text = data.get('tree_text', '')
+        
+        if not tree_text:
+            return jsonify({'success': False, 'message': 'No tree text provided'}), 400
+        
+        # Create test instance and calculate distances
+        distance_test = DistanceTest()
+        results = distance_test.calculate_distances(tree_text)
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        print(f"Error calculating distances: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@app.route('/api/distance/download-word', methods=['POST'])
+def download_distance_word():
+    """Generate and download Word document with distance results"""
+    try:
+        from tests.distanceTest import DistanceTest
+        
+        data = request.get_json()
+        
+        # Create test instance and generate Word document
+        distance_test = DistanceTest()
+        doc_io = distance_test.generate_word_document(data)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'distance_analysis_{timestamp}.docx'
+        
+        return send_file(
+            doc_io,
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        print(f"Error generating Word document: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
 @app.route('/api/start_test', methods=['POST'])
 def start_test():
@@ -607,6 +690,12 @@ def run_test(test_type, params, output_format='txt'):
     # Initialize result writer
     result_writer = TestResultWriter(test_type, output_format)
     test_status[test_type]['result_file'] = result_writer.get_file_path()
+    # Initialize live counters for live summary updates
+    test_status[test_type]['live_success'] = 0
+    test_status[test_type]['live_fail'] = 0
+    test_status[test_type]['live_skipped'] = 0
+    test_status[test_type]['total_devices'] = None
+    test_status[test_type]['start_ts'] = time.time()
     
     # Refresh hop counts before starting test
     print(f"Refreshing hop counts before {test_type} test...")
@@ -622,34 +711,113 @@ def run_test(test_type, params, output_format='txt'):
         progress = int((current / total) * 100)
         test_status[test_type]['progress'] = progress
         test_status[test_type]['current_device'] = device_name
-        
-        # Add hop count to device result if available
-        if device_result and 'ip' in device_result:
-            device_result['hop_count'] = get_hop_count_for_ip(device_result['ip'], hop_counts)
-            
-            # Map device result fields for TestResultWriter compatibility
-            mapped_result = map_device_result_for_writer(device_result, test_type)
-            
-            # Write result to the chosen format file
+        # Ensure total devices is recorded for live summary
+        if test_status[test_type].get('total_devices') is None:
+            test_status[test_type]['total_devices'] = total
+        # Safely handle device result (mapping, writing) and socket emission
+        try:
+            # Add hop count to device result if available
+            if device_result and 'ip' in device_result:
+                device_result['hop_count'] = get_hop_count_for_ip(device_result['ip'], hop_counts)
+
+                # Map device result fields for TestResultWriter compatibility and write
+                try:
+                    mapped_result = map_device_result_for_writer(device_result, test_type)
+                except Exception as e:
+                    print(f"Warning: Failed to map device result for writer: {e}")
+                    traceback.print_exc()
+                    mapped_result = None
+
+                if mapped_result is not None:
+                    try:
+                        result_writer.append_result(mapped_result)
+                    except Exception as e:
+                        print(f"Warning: Failed to write result to {output_format} file: {e}")
+                        traceback.print_exc()
+
+            # Update live counters based on device_result
             try:
-                result_writer.append_result(mapped_result)
+                # Determine category: success / fail / skipped
+                category = None
+                if device_result:
+                    cs = str(device_result.get('connection_status', '')).lower()
+                    if 'skipp' in cs:
+                        category = 'skipped'
+                    elif 'connect' in cs or 'success' in cs or 'available' in cs:
+                        category = 'success'
+                    elif 'fail' in cs or 'error' in cs or 'unavail' in cs or 'no response' in cs:
+                        category = 'fail'
+
+                    # Fallbacks for ping-like results
+                    if category is None:
+                        if 'packets_rx' in device_result:
+                            try:
+                                if int(device_result.get('packets_rx', 0)) > 0:
+                                    category = 'success'
+                                else:
+                                    # If hop_count was '-' we treat it as skipped
+                                    if str(device_result.get('hop_count', '')).strip() in ['', '-', None]:
+                                        category = 'skipped'
+                                    else:
+                                        category = 'fail'
+                            except Exception:
+                                category = 'fail'
+
+                    # RSSI/RPL fallbacks: presence of a value
+                    if category is None:
+                        if device_result.get('rsl_in') not in (None, '-', '') or device_result.get('rsl_out') not in (None, '-', ''):
+                            category = 'success'
+                        elif device_result.get('rpl_data') not in (None, '-', ''):
+                            category = 'success'
+
+                if category == 'success':
+                    test_status[test_type]['live_success'] = test_status[test_type].get('live_success', 0) + 1
+                elif category == 'fail':
+                    test_status[test_type]['live_fail'] = test_status[test_type].get('live_fail', 0) + 1
+                elif category == 'skipped':
+                    test_status[test_type]['live_skipped'] = test_status[test_type].get('live_skipped', 0) + 1
             except Exception as e:
-                print(f"Warning: Failed to write result to {output_format} file: {e}")
-        
-        # Prepare socket data
-        socket_data = {
-            'test_type': test_type,
-            'progress': progress,
-            'current_device': device_name,
-            'current': current,
-            'total': total
-        }
-        
-        # Add device result if provided
-        if device_result:
-            socket_data['device_result'] = device_result
-        
-        socketio.emit('test_progress', socket_data)
+                print(f"Warning: Failed to update live counters: {e}")
+                traceback.print_exc()
+
+            # Prepare socket data
+            socket_data = {
+                'test_type': test_type,
+                'progress': progress,
+                'current_device': device_name,
+                'current': current,
+                'total': total
+            }
+
+            # Add device result if provided
+            if device_result:
+                socket_data['device_result'] = device_result
+
+            try:
+                # Add live summary to socket payload
+                total_dev = test_status[test_type].get('total_devices', total)
+                elapsed = int(time.time() - test_status[test_type].get('start_ts', time.time()))
+                minutes = elapsed // 60
+                seconds = elapsed % 60
+                duration_str = f"{minutes}m {seconds}s" if minutes > 0 else f"{seconds}s"
+
+                socket_data['live_summary'] = {
+                    'success': test_status[test_type].get('live_success', 0),
+                    'fail': test_status[test_type].get('live_fail', 0),
+                    'skipped': test_status[test_type].get('live_skipped', 0),
+                    'total': total_dev,
+                    'duration': duration_str
+                }
+
+                socketio.emit('test_progress', socket_data)
+            except Exception as e:
+                print(f"Warning: Failed to emit test_progress socket event: {e}")
+                traceback.print_exc()
+
+        except Exception as e:
+            # Catch any unexpected exceptions in the progress callback to avoid stopping the test loop
+            print(f"Unexpected error in progress_callback: {e}")
+            traceback.print_exc()
     
     def stop_callback():
         stop_requested = stop_flags.get(test_type, False)
@@ -781,10 +949,34 @@ def run_test(test_type, params, output_format='txt'):
             print(f"DEBUG: Removing thread reference for {test_type}")
             test_threads.pop(test_type, None)
         
-        # Emit completion event
+        # Prepare final live summary
+        try:
+            total_dev = test_status[test_type].get('total_devices', test_status[test_type].get('total_run') or 0)
+            elapsed = int(time.time() - test_status[test_type].get('start_ts', time.time()))
+            minutes = elapsed // 60
+            seconds = elapsed % 60
+            duration_str = f"{minutes}m {seconds}s" if minutes > 0 else f"{seconds}s"
+
+            live_summary = {
+                'success': test_status[test_type].get('live_success', 0),
+                'fail': test_status[test_type].get('live_fail', 0),
+                'skipped': test_status[test_type].get('live_skipped', 0),
+                'total': total_dev,
+                'duration': duration_str
+            }
+        except Exception:
+            live_summary = {
+                'success': test_status[test_type].get('live_success', 0),
+                'fail': test_status[test_type].get('live_fail', 0),
+                'skipped': test_status[test_type].get('live_skipped', 0),
+                'total': test_status[test_type].get('total_run', 0),
+                'duration': ''
+            }
+
         socketio.emit('test_completed', {
             'test_type': test_type,
-            'status': test_status.get(test_type, {})
+            'status': test_status.get(test_type, {}),
+            'live_summary': live_summary
         })
         
         print(f"DEBUG: Cleanup complete for {test_type}")
@@ -1185,6 +1377,69 @@ def get_disconnected_nodes():
             'success': False, 
             'error': f'Failed to get disconnected nodes: {str(e)}'
         }), 500
+
+
+@app.route('/api/regenerate_report', methods=['POST'])
+def regenerate_report():
+    """Regenerate a test report from frontend-provided table results and summary"""
+    try:
+        data = request.get_json()
+        test_type = data.get('test_type')
+        output_format = data.get('output_format', 'txt')
+        results = data.get('results', [])
+        summary = data.get('summary', '')
+
+        if not test_type:
+            return jsonify({'success': False, 'error': 'Missing test_type'}), 400
+
+        # Create a fresh TestResultWriter using provided format
+        writer = TestResultWriter(test_type, output_format)
+
+        # Append each provided result after mapping
+        for r in results:
+            try:
+                mapped = map_device_result_for_writer(r, test_type)
+                writer.append_result(mapped)
+            except Exception as e:
+                # Continue even if a single row fails to map
+                print(f"Warning: Failed to map/append row during regeneration: {e}")
+                traceback.print_exc()
+
+        # Add summary if present
+        if summary:
+            try:
+                writer.append_summary(summary)
+            except Exception:
+                pass
+
+        # For Word documents, attempt to include the Wi-SUN tree
+        if output_format.lower() == 'word':
+            try:
+                # Try to fetch tree via wsbrd_cli as other endpoints do
+                result = subprocess.run(['wsbrd_cli', 'status'], capture_output=True, text=True, timeout=30)
+                if result.returncode == 0:
+                    tree_output = result.stdout.strip()
+                    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    writer.add_wisun_tree(tree_output, timestamp)
+            except Exception as e:
+                print(f"Warning: Could not fetch Wi-SUN tree for regenerated report: {e}")
+                traceback.print_exc()
+
+        # Finalize and save the regenerated file
+        file_path = writer.finalize()
+
+        # Update test_status record so download endpoint can find this file
+        if test_type not in test_status:
+            test_status[test_type] = {}
+        test_status[test_type]['result_file'] = file_path
+
+        return jsonify({'success': True, 'file_path': file_path})
+
+    except Exception as e:
+        print(f"Error in /api/regenerate_report: {e}")
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     # Initialize hop counts before starting the server

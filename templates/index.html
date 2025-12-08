@@ -46,17 +46,17 @@
     
     <!-- Special Tests -->
     <div class="col-md-6 col-lg-4">
-        <div class="card h-100 shadow-sm border-warning">
+        <div class="card h-100 shadow-sm border-info">
             <div class="card-body">
                 <h5 class="card-title">
-                    <i class="fas fa-power-off text-warning me-2"></i>
-                    Border Router Restart Test
+                    <i class="fas fa-ruler-horizontal text-info me-2"></i>
+                    Distance Calculation Test
                 </h5>
-                <p class="card-text">Test node reconnection behavior after BR restart/recovery</p>
+                <p class="card-text">Calculate distances between parent and child nodes based on GPS coordinates</p>
                 <div class="mt-auto">
-                    <a href="{{ url_for('restart_test_page') }}" class="btn btn-warning">
-                        <i class="fas fa-play me-1"></i>
-                        Configure & Run
+                    <a href="{{ url_for('distance_test_page') }}" class="btn btn-primary">
+                        <i class="fas fa-calculator me-1"></i>
+                        Calculate Distances
                     </a>
                 </div>
             </div>
@@ -84,7 +84,7 @@
                         <ul class="list-unstyled mb-0">
                             <li><strong>Disconnections Test:</strong> Checks disconnection statistics</li>
                             <li><strong>Availability Test:</strong> Tests device availability</li>
-                            <li><strong>Restart Test:</strong> Tests node reconnection after BR restart</li>
+                            <li><strong>Distance Test:</strong> Calculates distances between nodes using GPS coordinates</li>
                         </ul>
                     </div>
                 </div>

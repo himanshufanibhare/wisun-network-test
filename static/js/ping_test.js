@@ -70,6 +70,10 @@ function setupSocketHandlers() {
             if (data.device_result) {
                 updateResultsTable(data.device_result);
             }
+            // Update live summary if provided
+            if (data.live_summary) {
+                updateLiveSummary(data.live_summary);
+            }
             if (data.current !== undefined && data.total !== undefined) {
                 const spinnerText = document.getElementById('testSpinnerText');
                 if (spinnerText) {
@@ -97,7 +101,8 @@ function setupSocketHandlers() {
             if (data.results) {
                 populateResultsTable(data.results);
             }
-            testCompleted();
+            // Use live_summary from socket payload if available
+            testCompleted(data.live_summary || data.status || null);
         }
     });
 
@@ -162,6 +167,17 @@ function setupSocketHandlers() {
             resetRetestButton(deviceId, data.ip, data.label);
         }
     });
+}
+
+function updateLiveSummary(live) {
+    const summaryEl = document.getElementById('testSummary');
+    if (!summaryEl) return;
+    const total = live.total || 0;
+    const success = live.success || 0;
+    const fail = live.fail || 0;
+    const skipped = live.skipped || 0;
+    const duration = live.duration || '';
+    summaryEl.textContent = `Summary : ${success}/${total} reachable , ${fail}/${total} failed, ${skipped}/${total} skipped, Duration : ${duration}`;
 }
 
 function startTest() {
@@ -373,11 +389,17 @@ function updateResultsTable(deviceResult) {
         statusHTML = `<span class="badge bg-secondary"><i class="fas fa-question"></i> Unknown</span>`;
     }
 
+    // Disable retest for skipped devices
+    const isSkipped = deviceResult.connection_status === 'Skipped' || deviceResult.status === 'Skipped' || deviceResult.skipped === true;
+    const finalButtonClass = isSkipped ? 'btn-secondary' : buttonClass;
+    const disabledAttr = isSkipped ? 'disabled' : '';
+    const dataSkippedAttr = isSkipped ? 'data-skipped="true"' : '';
+
     const rowHTML = `
         <td class="srno-column">${srNo}</td>
-        <td class="ip-column">${deviceResult.ip}</td>
-        <td>${deviceResult.label || '-'}</td>
-        <td class="hop-count-column">${deviceResult.hop_count === -1 ? '-' : (deviceResult.hop_count || '-')}</td>
+        <td class="ip-address"><code>${deviceResult.ip}</code></td>
+        <td class="device-label">${deviceResult.label || '-'}</td>
+        <td class="hop-count">${deviceResult.hop_count === -1 ? '-' : (deviceResult.hop_count || '-')}</td>
         <td class="metric-column">${deviceResult.packets_tx || '-'}</td>
         <td class="metric-column">${deviceResult.packets_rx || '-'}</td>
         <td class="metric-column ${getStatusClass(deviceResult.loss_percent)}">${deviceResult.loss_percent !== undefined && deviceResult.loss_percent !== '-' ? deviceResult.loss_percent + '%' : '-'}</td>
@@ -387,9 +409,9 @@ function updateResultsTable(deviceResult) {
         <td class="metric-column">${deviceResult.mdev_time || '-'}</td>
         <td class="status">${statusHTML}</td>
         <td class="text-center">
-            <button class="btn ${buttonClass} btn-sm" 
+            <button class="btn ${finalButtonClass} btn-sm" 
                     onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')"
-                    id="retest_${deviceId}">
+                    id="retest_${deviceId}" ${disabledAttr} ${dataSkippedAttr}>
                 <i class="fas ${buttonIcon} me-1"></i>${buttonText}
             </button>
         </td>
@@ -441,94 +463,81 @@ function getStatusText(lossPercent) {
     return 'Failed';
 }
 
-function testCompleted() {
+function testCompleted(status) {
     testRunning = false;
 
     document.getElementById('startBtn').disabled = false;
     document.getElementById('stopBtn').disabled = true;
     document.getElementById('testSpinner').classList.add('d-none');
 
-    // Enable all retest buttons
+    // Enable all retest buttons except those marked as skipped
     const retestButtons = document.querySelectorAll('#resultsTableBody button[id^="retest_"]');
     retestButtons.forEach(button => {
-        button.disabled = false;
+        if (!button.dataset || button.dataset.skipped !== 'true') {
+            button.disabled = false;
+        }
     });
 
     showSuccess('Ping test completed successfully!');
 
-    fetch(`/api/test_status/${currentTestType}`)
-        .then(res => res.json())
-        .then(data => {
-            const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary) {
-                summaryEl.textContent = data.summary;
-            } else {
-                summaryEl.textContent = 'Ping test completed.';
-            }
+    // If status/live_summary provided from socket, use it
+    const summaryEl = document.getElementById('testSummary');
+    if (status) {
+        // status may be live_summary or test_status object
+        let live = status.live_summary || status;
+        if (status.success === undefined && status.live_summary === undefined && status.live_success !== undefined) {
+            // status is test_status object containing live_success/live_fail/live_skipped
+            live = {
+                success: status.live_success || 0,
+                fail: status.live_fail || 0,
+                skipped: status.live_skipped || 0,
+                total: status.total_devices || status.total_run || 0,
+                duration: status.duration || ''
+            };
+        }
+        if (summaryEl) {
+            summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+        }
 
-            // Enable download button
-            const downloadBtn = document.getElementById('downloadReportBtn');
-            if (downloadBtn) {
-                console.log('Found download button, enabling it...');
-                downloadBtn.disabled = false;
-                // Remove old event listener by cloning
-                const newBtn = downloadBtn.cloneNode(true);
-                downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
+        // Enable download button
+        const downloadBtn = document.getElementById('downloadReportBtn');
+        if (downloadBtn) {
+            downloadBtn.disabled = false;
+            const newBtn = downloadBtn.cloneNode(true);
+            downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
 
-                newBtn.addEventListener('click', function () {
-                    console.log('=== DOWNLOAD BUTTON CLICKED ===');
-
-                    // Check if output format element exists
-                    const outputFormatElement = document.querySelector('select[name="output_format"]');
-                    if (!outputFormatElement) {
-                        console.error('Output format select element not found!');
-                        alert('Error: Output format selector not found');
-                        return;
-                    }
-
-                    // Get selected output format and regenerate report before download
-                    const outputFormat = outputFormatElement.value;
-                    console.log('Selected output format:', outputFormat);
-                    console.log('Current test type:', currentTestType);
-
-                    // First regenerate the report with latest table data, then download
-                    regenerateReportWithUpdatedResults()
-                        .then(() => {
-                            // Build download URL after regeneration
-                            const downloadUrl = `/api/test_result/download/${currentTestType}/${outputFormat}`;
-                            console.log('Download URL:', downloadUrl);
-
-                            // Try to trigger download
-                            try {
-                                console.log('Attempting to download regenerated report...');
-
-                                // Create a temporary anchor element
-                                const link = document.createElement('a');
-                                link.href = downloadUrl;
-                                link.download = ''; // This suggests it's a download
-                                link.style.display = 'none';
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-
-                                console.log('Download triggered successfully via anchor element');
-                            } catch (error) {
-                                console.error('Error during download:', error);
-                                // Fallback to window.location.href
-                                window.location.href = downloadUrl;
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Failed to regenerate report before download:', error);
-                            // Still try to download the existing file
-                            const downloadUrl = `/api/test_result/download/${currentTestType}/${outputFormat}`;
-                            window.location.href = downloadUrl;
-                        });
-                });
-            } else {
-                console.error('Download button not found!');
-            }
-        });
+            newBtn.addEventListener('click', function () {
+                const outputFormatElement = document.querySelector('select[name="output_format"]');
+                if (!outputFormatElement) {
+                    alert('Error: Output format selector not found');
+                    return;
+                }
+                const outputFormat = outputFormatElement.value;
+                regenerateReportWithUpdatedResults()
+                    .then(() => window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`)
+                    .catch(() => window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`);
+            });
+        }
+    } else {
+        // Fallback: fetch latest status from backend and prefer live counters
+        fetch(`/api/test_status/${currentTestType}`)
+            .then(res => res.json())
+            .then(data => {
+                const sEl = document.getElementById('testSummary');
+                if (sEl) {
+                    const live = {
+                        success: data.live_success || 0,
+                        fail: data.live_fail || 0,
+                        skipped: data.live_skipped || 0,
+                        total: data.total_devices || data.total_run || 0,
+                        duration: ''
+                    };
+                    sEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+                }
+                const btn = document.getElementById('downloadReportBtn');
+                if (btn) btn.disabled = false;
+            });
+    }
 }
 
 function testStopped() {
@@ -567,7 +576,26 @@ function testStopped() {
         .then(res => res.json())
         .then(data => {
             const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary) summaryEl.textContent = data.summary;
+            if (data) {
+                if (data.live_summary && summaryEl) {
+                    const live = {
+                        success: data.live_summary.success || 0,
+                        fail: data.live_summary.fail || 0,
+                        skipped: data.live_summary.skipped || 0,
+                        total: data.live_summary.total || data.total_devices || data.total_run || 0,
+                        duration: data.live_summary.duration || ''
+                    };
+                    summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    // Prefer recalculating summary from current DOM table if available
+                    updateSummaryFromTable();
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    updateSummaryFromTable();
+                } else if (summaryEl) {
+                    summaryEl.textContent = data.summary || 'Test completed.';
+                }
+            }
+
             const btn = document.getElementById('downloadLogBtn');
             if (btn) btn.disabled = false;
         });
@@ -662,6 +690,9 @@ function retestDevice(ip, label, deviceId) {
 function resetRetestButton(deviceId, ip, label) {
     const button = document.getElementById(`retest_${deviceId}`);
     if (button) {
+        // Do not re-enable retest button for skipped devices
+        if (button.dataset && button.dataset.skipped === 'true') return;
+
         button.disabled = false;
         button.innerHTML = '<i class="fas fa-redo me-1"></i>Retest';
         button.className = 'btn btn-outline-secondary btn-sm';
@@ -842,18 +873,18 @@ function updateSummaryFromTable() {
     });
 
     const testedCount = totalCount - skippedCount;
-    const TOTAL_DEVICES = 28; // Total devices in FAN11_FSK_IPV6
     if (totalCount > 0) {
         const summaryEl = document.getElementById('testSummary');
         if (summaryEl) {
             // Get original summary to preserve duration if it exists
             const originalSummary = summaryEl.textContent;
-            const durationMatch = originalSummary.match(/ - Duration: (.+)$/);
+            const durationMatch = originalSummary.match(/Duration: (.+)$/);
             const durationStr = durationMatch ? ` - Duration: ${durationMatch[1]}` : '';
 
-            // Always show success out of total devices, remove skipped count from summary
-            const successRate = (successCount / TOTAL_DEVICES * 100).toFixed(1);
-            summaryEl.textContent = `SUMMARY: ${successCount}/${TOTAL_DEVICES} devices reachable (${successRate}% success rate)${durationStr}`;
+            // Use live-style summary format and compute success/fail/skipped out of total rows
+            const successRate = ((successCount / totalCount) * 100).toFixed(1);
+            const failCount = totalCount - successCount - skippedCount;
+            summaryEl.textContent = `Summary : ${successCount}/${totalCount} reachable , ${failCount}/${totalCount} failed, ${skippedCount}/${totalCount} skipped, Duration : ${durationStr.replace(' - Duration: ', '')}`;
         }
     }
 }
