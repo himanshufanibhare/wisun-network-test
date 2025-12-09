@@ -1,0 +1,194 @@
+/* Distance Test Specific Styles */
+
+.input-section {
+    transition: all 0.3s ease;
+}
+
+/* Ensure file input and buttons are same height */
+#treeFile {
+    height: calc(1.5em + 0.5rem + 2px);
+}
+
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+#resultsTable {
+    font-size: 0.75rem;
+}
+
+#resultsTable thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #212529;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.5rem;
+}
+
+#resultsTable tbody td {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+#resultsTable tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+    cursor: pointer;
+}
+
+.table-responsive {
+    overflow-y: auto;
+}
+
+#treeText {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    background-color: #f8f9fa;
+}
+
+.btn-group {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: none;
+    margin-bottom: 1rem;
+}
+
+.card-header {
+    font-weight: 600;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.125);
+    padding: 0.75rem 1rem;
+}
+
+.statistics-card {
+    border-left: 4px solid #0d6efd;
+    transition: transform 0.2s;
+}
+
+.statistics-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+#downloadWordBtn {
+    min-width: 250px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+#downloadWordBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.alert {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading animation */
+#loadingSpinner .spinner-border {
+    border-width: 0.35rem;
+}
+
+/* File input styling */
+#treeFile {
+    cursor: pointer;
+}
+
+#treeFile:hover {
+    background-color: #f8f9fa;
+}
+
+/* Table cell styling */
+#resultsTable td {
+    vertical-align: middle;
+    word-break: break-all;
+    color: #000000;
+}
+
+#resultsTable tbody tr td:last-child {
+    font-weight: normal;
+    color: #000000;
+    text-align: center;
+}
+
+#resultsTable code {
+    color: #000000;
+    font-size: 0.7rem;
+}
+
+/* Badge styling */
+.badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+/* Modal styling */
+#modalTreeText {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    background-color: #f8f9fa;
+    border: 2px solid #dee2e6;
+}
+
+#modalTreeText:focus {
+    background-color: #ffffff;
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.modal-header {
+    border-bottom: 3px solid rgba(255, 255, 255, 0.2);
+}
+
+.modal-footer {
+    border-top: 2px solid #dee2e6;
+}
+
+#confirmPasteBtn {
+    min-width: 180px;
+}
+
+/* Paste Text button styling */
+#pasteTextBtn {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+#pasteTextBtn:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.85rem;
+    }
+    
+    #resultsTable th,
+    #resultsTable td {
+        padding: 0.5rem;
+    }
+    
+    .statistics-card h3 {
+        font-size: 1.5rem;
+    }
+    
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    #modalTreeText {
+        font-size: 0.8rem;
+    }
+}

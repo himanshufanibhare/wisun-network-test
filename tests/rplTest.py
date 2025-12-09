@@ -9,6 +9,7 @@ import json
 import time
 from tests.logger import get_logger
 from tests.ip import FAN11_FSK_IPV6
+from tests.hopCountUtils import get_hop_count_for_ip, should_skip_device, create_skipped_result, load_hop_counts
 
 def get_rpl_rank(ip, timeout=100, stop_callback=None):
     """
@@ -73,10 +74,17 @@ def get_rpl_rank(ip, timeout=100, stop_callback=None):
 
 
 def fetch_rpl_for_all(log_file=None, progress_callback=None, stop_callback=None, timeout_val=100, pause_callback=None):
+    # Track test start time
+    import time
+    test_start_time = time.time()
+    
+    # Load hop counts data once for efficiency
+    hop_counts_data = load_hop_counts()
+    
     logger = get_logger("rpl_rank_test", log_file)
     logger.info(f"=== RPL RANK TEST STARTED ({len(FAN11_FSK_IPV6)} devices) ===")
 
-    success, fail = 0, 0
+    success, fail, skipped = 0, 0, 0
     total_devices = len(FAN11_FSK_IPV6)
     current_device = 0
 
@@ -90,9 +98,31 @@ def fetch_rpl_for_all(log_file=None, progress_callback=None, stop_callback=None,
             time.sleep(0.5)  # Wait while paused
             if stop_callback and stop_callback():  # Check stop while paused
                 logger.info("Test stopped by user while paused")
-                return success, fail
-                
+                return success, fail, skipped
+        
         current_device += 1
+        
+        # Check if device should be skipped
+        if should_skip_device(ip, hop_counts_data):
+            skipped += 1
+            hop_count = get_hop_count_for_ip(ip) if hop_counts_data else -1
+            
+            # Log the skip
+            logger.info(f"SKIPPED: {device_name} ({ip}) - Not in hop_counts.json")
+            
+            # Send skipped result to progress callback
+            if progress_callback:
+                device_result = {
+                    'ip': ip,
+                    'label': device_name,
+                    'hop_count': '-',
+                    'rank': '-',
+                    'rpl_rank': '-',
+                    'connection_status': 'Skipped'
+                }
+                progress_callback(current_device, total_devices, f"Skipped {device_name}", device_result)
+            
+            continue
         logger.info(f"Testing device {current_device}/{total_devices}: {device_name} ({ip})")
             
         rpl_rank = get_rpl_rank(ip, timeout_val, stop_callback)
@@ -133,11 +163,25 @@ def fetch_rpl_for_all(log_file=None, progress_callback=None, stop_callback=None,
             }
             progress_callback(current_device, total_devices, f"Testing {device_name}", device_result)
 
+    # Calculate test duration
+    test_end_time = time.time()
+    total_duration = test_end_time - test_start_time
+    duration_minutes = int(total_duration // 60)
+    duration_seconds = int(total_duration % 60)
+    
+    if duration_minutes > 0:
+        duration_str = f"{duration_minutes}m {duration_seconds}s"
+    else:
+        duration_str = f"{duration_seconds}s"
+
     total = len(FAN11_FSK_IPV6)
-    summary = f"SUMMARY: {success}/{total} devices responded ({(success/total)*100:.1f}% success rate)"
+    tested = success + fail  # Only devices actually tested (not skipped)
+    # Always show success out of total devices, remove skipped count from summary
+    success_rate = (success / total * 100) if total > 0 else 0
+    summary = f"SUMMARY: {success}/{total} devices responded ({success_rate:.1f}% success rate) - Duration: {duration_str}"
     logger.info(summary)
     logger.info("=== RPL RANK TEST COMPLETED ===")
-    return success, fail
+    return success, fail, skipped
 
 
 if __name__ == "__main__":

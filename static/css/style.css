@@ -6,6 +6,26 @@
     --warning-color: #1100fd;
     --danger-color: #dc3545;
     --info-color: #0dcaf0;
+    --purple-color: #6f42c1;
+}
+
+/* Custom text color for purple */
+.text-purple {
+    color: var(--purple-color) !important;
+}
+
+/* Modal backdrop fix */
+.modal-backdrop {
+    z-index: 1040 !important;
+}
+
+.modal {
+    z-index: 1050 !important;
+}
+
+/* Ensure modal cleanup */
+body.modal-open {
+    overflow: hidden !important;
 }
 
 body {

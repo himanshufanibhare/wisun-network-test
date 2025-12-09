@@ -15,6 +15,9 @@ function initializeTestPage() {
 
     // Check if test is already running
     checkTestStatus();
+    
+    // Initialize Wi-SUN tree functionality
+    initializeWisunTreeFeatures();
 }
 
 function setupEventListeners() {
@@ -67,6 +70,10 @@ function setupSocketHandlers() {
             if (data.device_result) {
                 updateResultsTable(data.device_result);
             }
+            // Update live summary if provided
+            if (data.live_summary) {
+                updateLiveSummary(data.live_summary);
+            }
             if (data.current !== undefined && data.total !== undefined) {
                 const spinnerText = document.getElementById('testSpinnerText');
                 if (spinnerText) {
@@ -94,7 +101,8 @@ function setupSocketHandlers() {
             if (data.results) {
                 populateResultsTable(data.results);
             }
-            testCompleted();
+            // Use live_summary from socket payload if available
+            testCompleted(data.live_summary || data.status || null);
         }
     });
 
@@ -141,10 +149,14 @@ function setupSocketHandlers() {
     });
 
     socket.on('device_retest_result', function (data) {
+        console.log(`🔄 DEBUG: Received device_retest_result event:`, data);
         if (data.test_type === currentTestType) {
+            console.log(`🔄 DEBUG: Processing retest result for ${currentTestType}`);
             updateDeviceInTable(data.device_result);
             // Recalculate and update summary after retest
             updateSummaryFromTable();
+        } else {
+            console.log(`🔄 DEBUG: Ignoring retest result for different test type: ${data.test_type} (current: ${currentTestType})`);
         }
     });
 
@@ -155,6 +167,17 @@ function setupSocketHandlers() {
             resetRetestButton(deviceId, data.ip, data.label);
         }
     });
+}
+
+function updateLiveSummary(live) {
+    const summaryEl = document.getElementById('testSummary');
+    if (!summaryEl) return;
+    const total = live.total || 0;
+    const success = live.success || 0;
+    const fail = live.fail || 0;
+    const skipped = live.skipped || 0;
+    const duration = live.duration || '';
+    summaryEl.textContent = `Summary : ${success}/${total} reachable , ${fail}/${total} failed, ${skipped}/${total} skipped, Duration : ${duration}`;
 }
 
 function startTest() {
@@ -356,33 +379,39 @@ function updateResultsTable(deviceResult) {
 
     // Determine status display with badges
     let statusHTML;
-    if (deviceResult.loss_percent === 0) {
+    if (deviceResult.connection_status === 'Skipped') {
+        statusHTML = `<span class="badge bg-secondary"><i class="fas fa-minus-circle"></i> Skipped</span>`;
+    } else if (deviceResult.loss_percent !== undefined && deviceResult.loss_percent !== '-' && deviceResult.loss_percent < 100) {
         statusHTML = `<span class="badge bg-success"><i class="fas fa-check"></i> Connected</span>`;
-    } else if (deviceResult.loss_percent === 100) {
+    } else if (deviceResult.loss_percent === 100 || deviceResult.loss_percent === '-') {
         statusHTML = `<span class="badge bg-danger"><i class="fas fa-times"></i> Failed</span>`;
-    } else if (deviceResult.loss_percent > 0 && deviceResult.loss_percent < 100) {
-        statusHTML = `<span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Unstable</span>`;
     } else {
         statusHTML = `<span class="badge bg-secondary"><i class="fas fa-question"></i> Unknown</span>`;
     }
 
+    // Disable retest for skipped devices
+    const isSkipped = deviceResult.connection_status === 'Skipped' || deviceResult.status === 'Skipped' || deviceResult.skipped === true;
+    const finalButtonClass = isSkipped ? 'btn-secondary' : buttonClass;
+    const disabledAttr = isSkipped ? 'disabled' : '';
+    const dataSkippedAttr = isSkipped ? 'data-skipped="true"' : '';
+
     const rowHTML = `
         <td class="srno-column">${srNo}</td>
-        <td class="ip-column">${deviceResult.ip}</td>
-        <td>${deviceResult.label || '-'}</td>
-        <td class="hop-count-column">${deviceResult.hop_count || '-'}</td>
+        <td class="ip-address"><code>${deviceResult.ip}</code></td>
+        <td class="device-label">${deviceResult.label || '-'}</td>
+        <td class="hop-count">${deviceResult.hop_count === -1 ? '-' : (deviceResult.hop_count || '-')}</td>
         <td class="metric-column">${deviceResult.packets_tx || '-'}</td>
         <td class="metric-column">${deviceResult.packets_rx || '-'}</td>
-        <td class="metric-column ${getStatusClass(deviceResult.loss_percent)}">${deviceResult.loss_percent !== undefined ? deviceResult.loss_percent + '%' : '-'}</td>
+        <td class="metric-column ${getStatusClass(deviceResult.loss_percent)}">${deviceResult.loss_percent !== undefined && deviceResult.loss_percent !== '-' ? deviceResult.loss_percent + '%' : '-'}</td>
         <td class="metric-column">${deviceResult.min_time || '-'}</td>
         <td class="metric-column">${deviceResult.max_time || '-'}</td>
         <td class="metric-column">${deviceResult.avg_time || '-'}</td>
         <td class="metric-column">${deviceResult.mdev_time || '-'}</td>
         <td class="status">${statusHTML}</td>
         <td class="text-center">
-            <button class="btn ${buttonClass} btn-sm" 
+            <button class="btn ${finalButtonClass} btn-sm" 
                     onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')"
-                    id="retest_${deviceId}">
+                    id="retest_${deviceId}" ${disabledAttr} ${dataSkippedAttr}>
                 <i class="fas ${buttonIcon} me-1"></i>${buttonText}
             </button>
         </td>
@@ -419,7 +448,7 @@ function populateResultsTable(results) {
 }
 
 function getStatusClass(lossPercent) {
-    if (lossPercent === undefined || lossPercent === null) return '';
+    if (lossPercent === undefined || lossPercent === null || lossPercent === '-') return '';
     if (lossPercent === 0) return 'status-success';
     if (lossPercent < 20) return 'status-warning';
     if (lossPercent < 100) return 'status-poor';
@@ -434,94 +463,81 @@ function getStatusText(lossPercent) {
     return 'Failed';
 }
 
-function testCompleted() {
+function testCompleted(status) {
     testRunning = false;
 
     document.getElementById('startBtn').disabled = false;
     document.getElementById('stopBtn').disabled = true;
     document.getElementById('testSpinner').classList.add('d-none');
 
-    // Enable all retest buttons
+    // Enable all retest buttons except those marked as skipped
     const retestButtons = document.querySelectorAll('#resultsTableBody button[id^="retest_"]');
     retestButtons.forEach(button => {
-        button.disabled = false;
+        if (!button.dataset || button.dataset.skipped !== 'true') {
+            button.disabled = false;
+        }
     });
 
     showSuccess('Ping test completed successfully!');
 
-    fetch(`/api/test_status/${currentTestType}`)
-        .then(res => res.json())
-        .then(data => {
-            const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary) {
-                summaryEl.textContent = data.summary;
-            } else {
-                summaryEl.textContent = 'Ping test completed.';
-            }
+    // If status/live_summary provided from socket, use it
+    const summaryEl = document.getElementById('testSummary');
+    if (status) {
+        // status may be live_summary or test_status object
+        let live = status.live_summary || status;
+        if (status.success === undefined && status.live_summary === undefined && status.live_success !== undefined) {
+            // status is test_status object containing live_success/live_fail/live_skipped
+            live = {
+                success: status.live_success || 0,
+                fail: status.live_fail || 0,
+                skipped: status.live_skipped || 0,
+                total: status.total_devices || status.total_run || 0,
+                duration: status.duration || ''
+            };
+        }
+        if (summaryEl) {
+            summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+        }
 
-            // Enable download button
-            const downloadBtn = document.getElementById('downloadReportBtn');
-            if (downloadBtn) {
-                console.log('Found download button, enabling it...');
-                downloadBtn.disabled = false;
-                // Remove old event listener by cloning
-                const newBtn = downloadBtn.cloneNode(true);
-                downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
+        // Enable download button
+        const downloadBtn = document.getElementById('downloadReportBtn');
+        if (downloadBtn) {
+            downloadBtn.disabled = false;
+            const newBtn = downloadBtn.cloneNode(true);
+            downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
 
-                newBtn.addEventListener('click', function () {
-                    console.log('=== DOWNLOAD BUTTON CLICKED ===');
-
-                    // Check if output format element exists
-                    const outputFormatElement = document.querySelector('select[name="output_format"]');
-                    if (!outputFormatElement) {
-                        console.error('Output format select element not found!');
-                        alert('Error: Output format selector not found');
-                        return;
-                    }
-
-                    // Get selected output format and regenerate report before download
-                    const outputFormat = outputFormatElement.value;
-                    console.log('Selected output format:', outputFormat);
-                    console.log('Current test type:', currentTestType);
-
-                    // First regenerate the report with latest table data, then download
-                    regenerateReportWithUpdatedResults()
-                        .then(() => {
-                            // Build download URL after regeneration
-                            const downloadUrl = `/api/test_result/download/${currentTestType}/${outputFormat}`;
-                            console.log('Download URL:', downloadUrl);
-
-                            // Try to trigger download
-                            try {
-                                console.log('Attempting to download regenerated report...');
-
-                                // Create a temporary anchor element
-                                const link = document.createElement('a');
-                                link.href = downloadUrl;
-                                link.download = ''; // This suggests it's a download
-                                link.style.display = 'none';
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-
-                                console.log('Download triggered successfully via anchor element');
-                            } catch (error) {
-                                console.error('Error during download:', error);
-                                // Fallback to window.location.href
-                                window.location.href = downloadUrl;
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Failed to regenerate report before download:', error);
-                            // Still try to download the existing file
-                            const downloadUrl = `/api/test_result/download/${currentTestType}/${outputFormat}`;
-                            window.location.href = downloadUrl;
-                        });
-                });
-            } else {
-                console.error('Download button not found!');
-            }
-        });
+            newBtn.addEventListener('click', function () {
+                const outputFormatElement = document.querySelector('select[name="output_format"]');
+                if (!outputFormatElement) {
+                    alert('Error: Output format selector not found');
+                    return;
+                }
+                const outputFormat = outputFormatElement.value;
+                regenerateReportWithUpdatedResults()
+                    .then(() => window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`)
+                    .catch(() => window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`);
+            });
+        }
+    } else {
+        // Fallback: fetch latest status from backend and prefer live counters
+        fetch(`/api/test_status/${currentTestType}`)
+            .then(res => res.json())
+            .then(data => {
+                const sEl = document.getElementById('testSummary');
+                if (sEl) {
+                    const live = {
+                        success: data.live_success || 0,
+                        fail: data.live_fail || 0,
+                        skipped: data.live_skipped || 0,
+                        total: data.total_devices || data.total_run || 0,
+                        duration: ''
+                    };
+                    sEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+                }
+                const btn = document.getElementById('downloadReportBtn');
+                if (btn) btn.disabled = false;
+            });
+    }
 }
 
 function testStopped() {
@@ -560,7 +576,26 @@ function testStopped() {
         .then(res => res.json())
         .then(data => {
             const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary) summaryEl.textContent = data.summary;
+            if (data) {
+                if (data.live_summary && summaryEl) {
+                    const live = {
+                        success: data.live_summary.success || 0,
+                        fail: data.live_summary.fail || 0,
+                        skipped: data.live_summary.skipped || 0,
+                        total: data.live_summary.total || data.total_devices || data.total_run || 0,
+                        duration: data.live_summary.duration || ''
+                    };
+                    summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    // Prefer recalculating summary from current DOM table if available
+                    updateSummaryFromTable();
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    updateSummaryFromTable();
+                } else if (summaryEl) {
+                    summaryEl.textContent = data.summary || 'Test completed.';
+                }
+            }
+
             const btn = document.getElementById('downloadLogBtn');
             if (btn) btn.disabled = false;
         });
@@ -605,7 +640,7 @@ function checkTestStatus() {
 }
 
 function retestDevice(ip, label, deviceId) {
-    console.log(`Retesting ping for device: ${label} (${ip})`);
+    console.log(`🔄 DEBUG: Starting retest for device: ${label} (${ip}) with deviceId: ${deviceId}`);
 
     const formData = new FormData(document.getElementById('testForm'));
     const parameters = {};
@@ -616,6 +651,7 @@ function retestDevice(ip, label, deviceId) {
             parameters[key] = value;
         }
     }
+    console.log(`🔄 DEBUG: Retest parameters:`, parameters);
 
     const button = document.getElementById(`retest_${deviceId}`);
     if (button) {
@@ -654,6 +690,9 @@ function retestDevice(ip, label, deviceId) {
 function resetRetestButton(deviceId, ip, label) {
     const button = document.getElementById(`retest_${deviceId}`);
     if (button) {
+        // Do not re-enable retest button for skipped devices
+        if (button.dataset && button.dataset.skipped === 'true') return;
+
         button.disabled = false;
         button.innerHTML = '<i class="fas fa-redo me-1"></i>Retest';
         button.className = 'btn btn-outline-secondary btn-sm';
@@ -661,12 +700,17 @@ function resetRetestButton(deviceId, ip, label) {
 }
 
 function updateDeviceInTable(deviceResult) {
+    console.log(`🔄 DEBUG: updateDeviceInTable called with:`, deviceResult);
     updateResultsTable(deviceResult);
     showSuccess(`Ping retest completed for ${deviceResult.label}`);
-    // Update summary after retest
-    updateSummaryFromTable();
+    
+    // Update summary after retest with a small delay to ensure DOM is updated
+    setTimeout(() => {
+        updateSummaryFromTable();
+    }, 100);
     
     // Trigger report regeneration with updated results
+    console.log('🔄 DEBUG: Calling regenerateReportWithUpdatedResults from updateDeviceInTable');
     regenerateReportWithUpdatedResults();
 }
 
@@ -711,10 +755,21 @@ function showNotification(message, type) {
 
 // Regenerate report files with updated test results
 function regenerateReportWithUpdatedResults() {
+    console.log('🔄 DEBUG: Starting report regeneration...');
     const outputFormat = document.querySelector('select[name="output_format"]').value;
+    console.log(`🔄 DEBUG: Output format: ${outputFormat}`);
     
     // Get current test results from table
     const tableResults = getCurrentTableResults();
+    console.log('🔄 DEBUG: Table results extracted:', tableResults);
+    
+    const payload = {
+        test_type: currentTestType,
+        output_format: outputFormat,
+        results: tableResults,
+        summary: document.getElementById('testSummary').textContent
+    };
+    console.log('🔄 DEBUG: Sending payload to backend:', payload);
     
     // Send to backend to regenerate report
     return fetch('/api/regenerate_report', {
@@ -722,20 +777,19 @@ function regenerateReportWithUpdatedResults() {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            test_type: currentTestType,
-            output_format: outputFormat,
-            results: tableResults,
-            summary: document.getElementById('testSummary').textContent
-        })
+        body: JSON.stringify(payload)
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('🔄 DEBUG: Backend response status:', response.status);
+        return response.json();
+    })
     .then(data => {
+        console.log('🔄 DEBUG: Backend response data:', data);
         if (data.success) {
-            console.log('Ping report regenerated successfully');
+            console.log('✅ Ping report regenerated successfully');
             return data;
         } else {
-            console.error('Failed to regenerate ping report:', data.error);
+            console.error('❌ Failed to regenerate ping report:', data.error);
             throw new Error(data.error);
         }
     })
@@ -747,34 +801,49 @@ function regenerateReportWithUpdatedResults() {
 
 // Extract current results from the table
 function getCurrentTableResults() {
+    console.log('🔍 DEBUG: Starting getCurrentTableResults()');
     const rows = document.querySelectorAll('#resultsTableBody tr[data-device-ip]');
+    console.log(`🔍 DEBUG: Found ${rows.length} data rows in table`);
     const results = [];
     
-    rows.forEach(row => {
+    rows.forEach((row, index) => {
         const cells = row.cells;
+        console.log(`🔍 DEBUG: Row ${index + 1} has ${cells.length} cells`);
         
-        // Get packet loss to determine status
-        const lossCell = cells[5]; // Loss % column
+        // Log all cell contents for debugging
+        for (let i = 0; i < cells.length; i++) {
+            console.log(`🔍 DEBUG: Row ${index + 1}, Cell ${i}: "${cells[i].textContent.trim()}"`);
+        }
+        
+        // Get packet loss to determine status - Loss % is now column 6
+        const lossCell = cells[6]; // Loss % column
         let lossPercent = 100;
         if (lossCell) {
             const lossText = lossCell.textContent.trim();
             lossPercent = parseFloat(lossText.replace('%', ''));
+            console.log(`🔍 DEBUG: Row ${index + 1} loss text: "${lossText}", parsed: ${lossPercent}`);
         }
         
-        results.push({
+        const resultObject = {
             sr_no: parseInt(cells[0].textContent) || 0,
             ip: cells[1].textContent,
             device_label: cells[2].textContent, // Use device_label to match backend expectations
-            packets_tx: parseInt(cells[3].textContent) || 0,
-            packets_rx: parseInt(cells[4].textContent) || 0,
+            hop_count: cells[3].textContent,
+            packets_tx: parseInt(cells[4].textContent) || 0,
+            packets_rx: parseInt(cells[5].textContent) || 0,
             loss_percent: isNaN(lossPercent) ? 100 : lossPercent,
-            min_rtt: cells[6] ? cells[6].textContent : 'N/A',
-            max_rtt: cells[7] ? cells[7].textContent : 'N/A',
-            avg_rtt: cells[8] ? cells[8].textContent : 'N/A',
-            hop_count: cells[9] ? cells[9].textContent : 'N/A',
+            min_rtt: cells[7] ? cells[7].textContent : 'N/A',
+            max_rtt: cells[8] ? cells[8].textContent : 'N/A',
+            avg_rtt: cells[9] ? cells[9].textContent : 'N/A',
+            mdev_time: cells[10] ? cells[10].textContent : 'N/A',
             status: lossPercent < 100 ? 'Success' : 'Failed'
-        });
+        };
+        
+        console.log(`🔍 DEBUG: Row ${index + 1} result object:`, resultObject);
+        results.push(resultObject);
     });
+    
+    console.log(`🔍 DEBUG: Final results array (${results.length} items):`, results);
     
     return results;
 }
@@ -784,29 +853,38 @@ function updateSummaryFromTable() {
     const rows = document.querySelectorAll('#resultsTableBody tr[data-device-ip]');
     let successCount = 0;
     let totalCount = rows.length;
+    let skippedCount = 0;
 
     rows.forEach(row => {
-        const lossCell = row.cells[5]; // Loss % column
+        const lossCell = row.cells[6]; // Loss % column - fixed from cells[5] to cells[6]
         if (lossCell) {
             const lossText = lossCell.textContent.trim();
-            const lossPercent = parseFloat(lossText.replace('%', ''));
-            // Consider success if packet loss < 100%
-            if (!isNaN(lossPercent) && lossPercent < 100) {
-                successCount++;
+            if (lossText === '-') {
+                // This is a skipped device
+                skippedCount++;
+            } else {
+                const lossPercent = parseFloat(lossText.replace('%', ''));
+                // Consider success if packet loss < 100%
+                if (!isNaN(lossPercent) && lossPercent < 100) {
+                    successCount++;
+                }
             }
         }
     });
 
+    const testedCount = totalCount - skippedCount;
     if (totalCount > 0) {
-        const successRate = (successCount / totalCount * 100).toFixed(1);
         const summaryEl = document.getElementById('testSummary');
         if (summaryEl) {
             // Get original summary to preserve duration if it exists
             const originalSummary = summaryEl.textContent;
-            const durationMatch = originalSummary.match(/ - Duration: (.+)$/);
+            const durationMatch = originalSummary.match(/Duration: (.+)$/);
             const durationStr = durationMatch ? ` - Duration: ${durationMatch[1]}` : '';
 
-            summaryEl.textContent = `SUMMARY: ${successCount}/${totalCount} devices reachable (${successRate}% success rate)${durationStr}`;
+            // Use live-style summary format and compute success/fail/skipped out of total rows
+            const successRate = ((successCount / totalCount) * 100).toFixed(1);
+            const failCount = totalCount - successCount - skippedCount;
+            summaryEl.textContent = `Summary : ${successCount}/${totalCount} reachable , ${failCount}/${totalCount} failed, ${skippedCount}/${totalCount} skipped, Duration : ${durationStr.replace(' - Duration: ', '')}`;
         }
     }
 }
@@ -815,3 +893,241 @@ function updateSummaryFromTable() {
 document.addEventListener('DOMContentLoaded', function () {
     console.log('Ping test page loaded');
 });
+
+// Wi-SUN Tree functionality
+function initializeWisunTreeFeatures() {
+    const wisunTreeBtn = document.getElementById('wisunTreeBtn');
+    const refreshTreeBtn = document.getElementById('refreshTreeBtn');
+    const connectedNodesBtn = document.getElementById('connectedNodesBtn');
+    const disconnectedNodesBtn = document.getElementById('disconnectedNodesBtn');
+    
+    if (!wisunTreeBtn) {
+        console.log('Wi-SUN tree button not found, skipping initialization');
+        return;
+    }
+
+    const wisunTreeModal = new bootstrap.Modal(document.getElementById('wisunTreeModal'), {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+
+    // Show modal and fetch tree data when button is clicked
+    wisunTreeBtn.addEventListener('click', function () {
+        // Ensure any existing backdrop is removed before showing
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.paddingRight = '';
+        
+        wisunTreeModal.show();
+        fetchWisunTreeData();
+    });
+
+    // Ensure proper cleanup when modal is hidden
+    document.getElementById('wisunTreeModal').addEventListener('hidden.bs.modal', function () {
+        // Clean up any remaining backdrop
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.paddingRight = '';
+        document.body.style.overflow = '';
+    });
+
+    // Refresh tree data when refresh button is clicked
+    if (refreshTreeBtn) {
+        refreshTreeBtn.addEventListener('click', function () {
+            fetchWisunTreeData();
+        });
+    }
+
+    // Show connected nodes when button is clicked
+    if (connectedNodesBtn) {
+        connectedNodesBtn.addEventListener('click', function () {
+            fetchConnectedNodes();
+        });
+    }
+
+    // Show disconnected nodes when button is clicked
+    if (disconnectedNodesBtn) {
+        disconnectedNodesBtn.addEventListener('click', function () {
+            fetchDisconnectedNodes();
+        });
+    }
+
+    function hideAllContent() {
+        const elements = ['wisunTreeContent', 'connectedNodesContent', 'disconnectedNodesContent'];
+        elements.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.classList.add('d-none');
+        });
+    }
+
+    function showLoading(message = 'Fetching Wi-SUN data...') {
+        const loadingElement = document.getElementById('wisunTreeLoading');
+        const errorElement = document.getElementById('wisunTreeError');
+        const loadingText = document.querySelector('#wisunTreeLoading p');
+        
+        if (loadingElement) loadingElement.classList.remove('d-none');
+        if (errorElement) errorElement.classList.add('d-none');
+        if (loadingText) loadingText.textContent = message;
+        hideAllContent();
+    }
+
+    function hideLoading() {
+        const loadingElement = document.getElementById('wisunTreeLoading');
+        if (loadingElement) loadingElement.classList.add('d-none');
+    }
+
+    function showError(errorText) {
+        hideLoading();
+        const errorTextElement = document.getElementById('wisunTreeErrorText');
+        const errorElement = document.getElementById('wisunTreeError');
+        
+        if (errorTextElement) errorTextElement.textContent = errorText;
+        if (errorElement) errorElement.classList.remove('d-none');
+    }
+
+    function fetchWisunTreeData() {
+        showLoading('Fetching Wi-SUN tree status...');
+        if (refreshTreeBtn) refreshTreeBtn.disabled = true;
+
+        fetch('/api/wisun_tree')
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (refreshTreeBtn) refreshTreeBtn.disabled = false;
+
+                if (data.success) {
+                    document.getElementById('wisunTreeTimestamp').textContent = data.timestamp;
+                    document.getElementById('wisunTreeDeviceCount').textContent = data.device_count || 0;
+                    document.getElementById('wisunTreeOutput').textContent = data.output;
+                    document.getElementById('wisunTreeContent').classList.remove('d-none');
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showError('Network error: ' + error.message);
+                if (refreshTreeBtn) refreshTreeBtn.disabled = false;
+            });
+    }
+
+    function fetchConnectedNodes() {
+        showLoading('Fetching connected nodes...');
+
+        fetch('/api/wisun_nodes/connected')
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+
+                if (data.success) {
+                    document.getElementById('connectedNodesTimestamp').textContent = data.timestamp;
+                    document.getElementById('connectedNodesCount').textContent = data.count;
+                    document.getElementById('connectedNodesTotalCount').textContent = data.total_nodes;
+                    
+                    const rawTextHtml = createNodesRawText(data.nodes, 'connected');
+                    document.getElementById('connectedNodesList').innerHTML = rawTextHtml;
+                    document.getElementById('connectedNodesContent').classList.remove('d-none');
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showError('Network error: ' + error.message);
+            });
+    }
+
+    function fetchDisconnectedNodes() {
+        showLoading('Fetching disconnected nodes...');
+
+        fetch('/api/wisun_nodes/disconnected')
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+
+                if (data.success) {
+                    document.getElementById('disconnectedNodesTimestamp').textContent = data.timestamp;
+                    document.getElementById('disconnectedNodesCount').textContent = data.count;
+                    document.getElementById('disconnectedNodesTotalCount').textContent = data.total_nodes;
+                    
+                    const rawTextHtml = createNodesRawText(data.nodes, 'disconnected');
+                    document.getElementById('disconnectedNodesList').innerHTML = rawTextHtml;
+                    document.getElementById('disconnectedNodesContent').classList.remove('d-none');
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showError('Network error: ' + error.message);
+            });
+    }
+
+    function createNodesRawText(nodes, type) {
+        if (!nodes || nodes.length === 0) {
+            return `<div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No ${type} nodes found.
+            </div>`;
+        }
+
+        let rawText = "Sr No".padEnd(8) + "Device Name".padEnd(25) + "IP Address".padEnd(42) + "Hop Count".padEnd(15) + "Pole No\n";
+
+        // Add separator line
+        rawText += "─".repeat(100) + "\n";
+
+        nodes.forEach((node, index) => {
+            const serialNo = `${index + 1}.`.padEnd(8);
+            const deviceName = node.device_name.padEnd(25);
+            const ipAddress = node.ip.padEnd(42);
+            const hopCount = (node.hop_count !== undefined ? node.hop_count.toString() : '-').padEnd(15);
+            const poleNumber = node.pole_number || 'Unknown';
+            
+            rawText += `${serialNo}${deviceName}${ipAddress}${hopCount}${poleNumber}\n`;
+        });
+
+        return `<pre class="bg-dark text-light p-3 rounded" style="max-height: 500px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre;">${rawText}</pre>`;
+    }
+
+    function createNodesTable(nodes, type) {
+        if (!nodes || nodes.length === 0) {
+            return `<div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No ${type} nodes found.
+            </div>`;
+        }
+
+        let tableHtml = `
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Device Name</th>
+                        <th>IP Address</th>
+                        <th>Hop Count</th>
+                        <th>Pole No</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        nodes.forEach((node, index) => {
+            const statusClass = type === 'connected' ? 'text-success' : 'text-danger';
+            const statusIcon = type === 'connected' ? 'fa-check-circle' : 'fa-times-circle';
+            
+            tableHtml += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${node.device_name}</strong></td>
+                    <td><code>${node.ip}</code></td>
+                    <td>
+                        <span class="badge bg-info">${node.hop_count !== undefined ? node.hop_count : '-'}</span>
+                    </td>
+                    <td><span class="badge bg-secondary">${node.pole_number || 'Unknown'}</span></td>
+                </tr>`;
+        });
+
+        tableHtml += `</tbody></table>`;
+        return tableHtml;
+    }
+}

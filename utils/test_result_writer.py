@@ -171,7 +171,7 @@ class TestResultWriter:
         if self.test_type == 'ping':
             packets_tx = str(result.get('packets_tx', 'N/A'))
             packets_rx = str(result.get('packets_rx', 'N/A'))
-            loss_percent = f"{result.get('loss_percent', 'N/A')}%" if result.get('loss_percent') is not None else 'N/A'
+            loss_percent = f"{result.get('loss_percent', 'N/A')}%" if result.get('loss_percent') is not None and result.get('loss_percent') != '-' else (result.get('loss_percent', 'N/A') if result.get('loss_percent') == '-' else 'N/A')
             min_rtt = str(result.get('min_time', 'N/A'))  # Changed from min_rtt to min_time
             max_rtt = str(result.get('max_time', 'N/A'))  # Changed from max_rtt to max_time
             avg_rtt = str(result.get('avg_time', 'N/A'))  # Changed from avg_rtt to avg_time

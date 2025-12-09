@@ -15,6 +15,9 @@ function initializeTestPage() {
 
     // Check if test is already running
     checkTestStatus();
+    
+    // Initialize Wi-SUN tree functionality
+    initializeWisunTreeFeatures();
 }
 
 function setupEventListeners() {
@@ -67,6 +70,9 @@ function setupSocketHandlers() {
             if (data.device_result) {
                 updateResultsTable(data.device_result);
             }
+            if (data.live_summary) {
+                updateLiveSummary(data.live_summary);
+            }
             if (data.current !== undefined && data.total !== undefined) {
                 const spinnerText = document.getElementById('testSpinnerText');
                 if (spinnerText) {
@@ -94,7 +100,7 @@ function setupSocketHandlers() {
             if (data.results) {
                 populateResultsTable(data.results);
             }
-            testCompleted();
+            testCompleted(data.live_summary || data.status || null);
         }
     });
 
@@ -153,6 +159,17 @@ function setupSocketHandlers() {
             resetRetestButton(deviceId, data.ip, data.label);
         }
     });
+}
+
+function updateLiveSummary(live) {
+    const summaryEl = document.getElementById('testSummary');
+    if (!summaryEl) return;
+    const total = live.total || 0;
+    const success = live.success || 0;
+    const fail = live.fail || 0;
+    const skipped = live.skipped || 0;
+    const duration = live.duration || '';
+    summaryEl.textContent = `Summary : ${success}/${total} reachable , ${fail}/${total} failed, ${skipped}/${total} skipped, Duration : ${duration}`;
 }
 
 function startTest() {
@@ -342,7 +359,9 @@ function updateResultsTable(deviceResult) {
 
     // Determine status display with badges
     let statusHTML;
-    if (deviceResult.status && deviceResult.status.includes('AVAILABLE ✅')) {
+    if (deviceResult.connection_status === 'Skipped') {
+        statusHTML = `<span class="badge bg-secondary"><i class="fas fa-minus-circle"></i> Skipped</span>`;
+    } else if (deviceResult.status && deviceResult.status.includes('AVAILABLE ✅')) {
         statusHTML = `<span class="badge bg-success"><i class="fas fa-check"></i> Available</span>`;
     } else if (deviceResult.status && deviceResult.status.includes('UNAVAILABLE ❌')) {
         statusHTML = `<span class="badge bg-danger"><i class="fas fa-times"></i> Unavailable</span>`;
@@ -356,18 +375,24 @@ function updateResultsTable(deviceResult) {
     const buttonText = isUnavailable ? 'Retry' : 'Retest';
     const buttonIcon = isUnavailable ? 'fa-exclamation-triangle' : 'fa-redo';
 
+    // Disable retest for skipped devices
+    const isSkipped = deviceResult.connection_status === 'Skipped' || deviceResult.status === 'Skipped' || deviceResult.skipped === true;
+    const finalButtonClass = isSkipped ? 'btn-secondary' : buttonClass;
+    const disabledAttr = isSkipped ? 'disabled' : '';
+    const dataSkippedAttr = isSkipped ? 'data-skipped="true"' : '';
+
     const deviceId = deviceResult.ip.replace(/[^a-zA-Z0-9]/g, '_');
     const rowHTML = `
         <td class="sr-no">${srNo}</td>
         <td class="ip-address">${deviceResult.ip}</td>
         <td class="device-label">${deviceResult.label || '-'}</td>
-        <td class="hop-count">${deviceResult.hop_count || '-'}</td>
+        <td class="hop-count">${deviceResult.hop_count === -1 ? '-' : (deviceResult.hop_count || '-')}</td>
         <td class="availability">${deviceResult.availability || '-'}</td>
         <td class="status">${statusHTML}</td>
         <td>
-            <button class="btn ${buttonClass} btn-sm" 
+            <button class="btn ${finalButtonClass} btn-sm" 
                     onclick="retestDevice('${deviceResult.ip}', '${deviceResult.label}', '${deviceId}')"
-                    id="retest_${deviceId}">
+                    id="retest_${deviceId}" ${disabledAttr} ${dataSkippedAttr}>
                 <i class="fas ${buttonIcon} me-1"></i>${buttonText}
             </button>
         </td>
@@ -410,49 +435,58 @@ function testCompleted() {
     document.getElementById('stopBtn').disabled = true;
     document.getElementById('testSpinner').classList.add('d-none');
 
-    // Enable all retest buttons
+    // Enable all retest buttons except those marked as skipped
     const retestButtons = document.querySelectorAll('#resultsTableBody button[id^="retest_"]');
     retestButtons.forEach(button => {
-        button.disabled = false;
+        if (!button.dataset || button.dataset.skipped !== 'true') {
+            button.disabled = false;
+        }
     });
 
     showSuccess('Availability test completed successfully!');
 
+    const summaryEl = document.getElementById('testSummary');
+    if (arguments.length && arguments[0]) {
+        const status = arguments[0];
+        let live = status.live_summary || status;
+        if (status.live_success !== undefined && !status.success) {
+            live = {
+                success: status.live_success || 0,
+                fail: status.live_fail || 0,
+                skipped: status.live_skipped || 0,
+                total: status.total_devices || status.total_run || 0,
+                duration: status.duration || ''
+            };
+        }
+        if (summaryEl) summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+        const downloadBtn = document.getElementById('downloadReportBtn');
+        if (downloadBtn) {
+            downloadBtn.disabled = false;
+            const newBtn = downloadBtn.cloneNode(true);
+            downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
+            newBtn.addEventListener('click', function () {
+                const outputFormat = document.querySelector('select[name="output_format"]').value;
+                regenerateReportWithUpdatedResults()
+                    .then(() => window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`)
+                    .catch(() => window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`);
+            });
+        }
+        return;
+    }
+
     fetch(`/api/test_status/${currentTestType}`)
         .then(res => res.json())
         .then(data => {
-            const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary) {
-                summaryEl.textContent = data.summary;
-            } else {
-                summaryEl.textContent = 'Availability test completed.';
-            }
-
-            // Enable download button
-            const downloadBtn = document.getElementById('downloadReportBtn');
-            if (downloadBtn) {
-                downloadBtn.disabled = false;
-                // Remove old event listener by cloning
-                const newBtn = downloadBtn.cloneNode(true);
-                downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
-
-                newBtn.addEventListener('click', function () {
-                    // Get the selected output format from the form
-                    const outputFormat = document.querySelector('select[name="output_format"]').value;
-                    
-                    // First regenerate the report with latest table data, then download
-                    regenerateReportWithUpdatedResults()
-                        .then(() => {
-                            // After regeneration is complete, trigger download
-                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
-                        })
-                        .catch(error => {
-                            console.error('Failed to regenerate report before download:', error);
-                            // Still try to download the existing file
-                            window.location.href = `/api/test_result/download/${currentTestType}/${outputFormat}`;
-                        });
-                });
-            }
+            const live = {
+                success: data.live_success || 0,
+                fail: data.live_fail || 0,
+                skipped: data.live_skipped || 0,
+                total: data.total_devices || data.total_run || 0,
+                duration: ''
+            };
+            if (summaryEl) summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+            const btn = document.getElementById('downloadReportBtn');
+            if (btn) btn.disabled = false;
         });
 }
 
@@ -492,7 +526,24 @@ function testStopped() {
         .then(res => res.json())
         .then(data => {
             const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary && summaryEl) summaryEl.textContent = data.summary;
+            if (data) {
+                if (data.live_summary && summaryEl) {
+                    const live = {
+                        success: data.live_summary.success || 0,
+                        fail: data.live_summary.fail || 0,
+                        skipped: data.live_summary.skipped || 0,
+                        total: data.live_summary.total || data.total_devices || data.total_run || 0,
+                        duration: data.live_summary.duration || ''
+                    };
+                    summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    updateSummaryFromTable();
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    updateSummaryFromTable();
+                } else if (summaryEl) {
+                    summaryEl.textContent = data.summary || 'Test completed.';
+                }
+            }
             const btn = document.getElementById('downloadLogBtn');
             if (btn) btn.disabled = false;
         });
@@ -501,7 +552,24 @@ function testStopped() {
         .then(res => res.json())
         .then(data => {
             const summaryEl = document.getElementById('testSummary');
-            if (data && data.summary) summaryEl.textContent = data.summary;
+            if (data) {
+                if (data.live_summary && summaryEl) {
+                    const live = {
+                        success: data.live_summary.success || 0,
+                        fail: data.live_summary.fail || 0,
+                        skipped: data.live_summary.skipped || 0,
+                        total: data.live_summary.total || data.total_devices || data.total_run || 0,
+                        duration: data.live_summary.duration || ''
+                    };
+                    summaryEl.textContent = `Summary : ${live.success}/${live.total} reachable , ${live.fail}/${live.total} failed, ${live.skipped}/${live.total} skipped, Duration : ${live.duration}`;
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    updateSummaryFromTable();
+                } else if (typeof updateSummaryFromTable === 'function' && document.querySelectorAll('#resultsTableBody tr[data-device-ip]').length > 0) {
+                    updateSummaryFromTable();
+                } else if (summaryEl) {
+                    summaryEl.textContent = data.summary || 'Test completed.';
+                }
+            }
             const btn = document.getElementById('downloadLogBtn');
             if (btn) btn.disabled = false;
         });
@@ -595,6 +663,9 @@ function retestDevice(ip, label, deviceId) {
 function resetRetestButton(deviceId, ip, label) {
     const button = document.getElementById(`retest_${deviceId}`);
     if (button) {
+        // Do not re-enable retest button for skipped devices
+        if (button.dataset && button.dataset.skipped === 'true') return;
+
         button.disabled = false;
         button.innerHTML = '<i class="fas fa-redo me-1"></i>Retest';
         button.className = 'btn btn-outline-secondary btn-sm';
@@ -604,8 +675,11 @@ function resetRetestButton(deviceId, ip, label) {
 function updateDeviceInTable(deviceResult) {
     updateResultsTable(deviceResult);
     showSuccess(`Availability retest completed for ${deviceResult.label}`);
-    // Update summary after retest
-    updateSummaryFromTable();
+    
+    // Update summary after retest with a small delay to ensure DOM is updated
+    setTimeout(() => {
+        updateSummaryFromTable();
+    }, 100);
     
     // Trigger report regeneration with updated results
     regenerateReportWithUpdatedResults();
@@ -638,15 +712,15 @@ function updateSummaryFromTable() {
     });
 
     if (totalCount > 0) {
-        const successRate = (successCount / totalCount * 100).toFixed(1);
         const summaryEl = document.getElementById('testSummary');
         if (summaryEl) {
             // Get original summary to preserve duration if it exists
             const originalSummary = summaryEl.textContent;
-            const durationMatch = originalSummary.match(/ - Duration: (.+)$/);
-            const durationStr = durationMatch ? ` - Duration: ${durationMatch[1]}` : '';
+            const durationMatch = originalSummary.match(/Duration: (.+)$/);
+            const durationStr = durationMatch ? `${durationMatch[1]}` : '';
 
-            summaryEl.textContent = `SUMMARY: ${successCount}/${totalCount} devices available (${successRate}% success rate)${durationStr}`;
+            const failCount = totalCount - successCount;
+            summaryEl.textContent = `Summary : ${successCount}/${totalCount} reachable , ${failCount}/${totalCount} failed, 0/${totalCount} skipped, Duration : ${durationStr}`;
         }
     }
 }// Utility functions for notifications
@@ -732,28 +806,45 @@ function getCurrentTableResults() {
     rows.forEach(row => {
         const cells = row.cells;
         
-        // Extract availability data from cells
-        let isAvailable = false;
-        let statusText = 'Unknown';
+        // Extract connection status from the Connection Status column (index 5)
+        let connectionStatus = 'Unknown';
+        let status = 'Failed';
         
-        // Check availability percentage (cell 3)
-        const availabilityCell = cells[3];
-        if (availabilityCell) {
-            const availText = availabilityCell.textContent.trim();
-            const availPercent = parseFloat(availText.replace('%', ''));
-            isAvailable = !isNaN(availPercent) && availPercent > 0;
-            statusText = isAvailable ? 'Available' : 'Unavailable';
+        if (cells.length > 5) {
+            const statusCell = cells[5]; // Connection Status column
+            
+            // Check if the status cell contains a badge
+            const badge = statusCell.querySelector('.badge');
+            if (badge) {
+                const badgeText = badge.textContent.trim();
+                if (badgeText.includes('Connected') || badgeText.includes('Available')) {
+                    connectionStatus = 'Connected';
+                    status = 'Success';
+                } else if (badgeText.includes('Failed') || badgeText.includes('Unavailable')) {
+                    connectionStatus = 'Disconnected';
+                    status = 'Failed';
+                }
+            } else {
+                // Fallback: check full cell text content
+                const cellText = statusCell.textContent.trim();
+                if (cellText.includes('Connected') || cellText.includes('Available') || cellText.includes('Success')) {
+                    connectionStatus = 'Connected';
+                    status = 'Success';
+                } else if (cellText.includes('Failed') || cellText.includes('Unavailable') || cellText.includes('Error')) {
+                    connectionStatus = 'Disconnected';
+                    status = 'Failed';
+                }
+            }
         }
         
         results.push({
             sr_no: parseInt(cells[0].textContent) || 0,
             ip: cells[1].textContent,
             device_label: cells[2].textContent, // Use device_label to match backend expectations
-            availability_percent: availabilityCell ? availabilityCell.textContent : '0%',
-            uptime: cells[4] ? cells[4].textContent : 'N/A',
-            downtime: cells[5] ? cells[5].textContent : 'N/A',
-            hop_count: cells[6] ? cells[6].textContent : 'N/A',
-            status: statusText
+            hop_count: cells[3] ? cells[3].textContent : 'N/A',
+            availability: cells[4] ? cells[4].textContent : 'N/A',
+            status: status,
+            connection_status: connectionStatus
         });
     });
     
@@ -761,6 +852,251 @@ function getCurrentTableResults() {
 }
 
 // Initialize page when DOM is loaded
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('Availability test page loaded');
+});
+
+// Wi-SUN Tree functionality
+function initializeWisunTreeFeatures() {
+    const wisunTreeBtn = document.getElementById('wisunTreeBtn');
+    const refreshTreeBtn = document.getElementById('refreshTreeBtn');
+    const connectedNodesBtn = document.getElementById('connectedNodesBtn');
+    const disconnectedNodesBtn = document.getElementById('disconnectedNodesBtn');
+    
+    if (!wisunTreeBtn) {
+        console.log('Wi-SUN tree button not found, skipping initialization');
+        return;
+    }
+
+    const wisunTreeModal = new bootstrap.Modal(document.getElementById('wisunTreeModal'), {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+
+    // Show modal and fetch tree data when button is clicked
+    wisunTreeBtn.addEventListener('click', function () {
+        // Ensure any existing backdrop is removed before showing
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.paddingRight = '';
+        
+        wisunTreeModal.show();
+        fetchWisunTreeData();
+    });
+
+    // Ensure proper cleanup when modal is hidden
+    document.getElementById('wisunTreeModal').addEventListener('hidden.bs.modal', function () {
+        // Clean up any remaining backdrop
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.paddingRight = '';
+        document.body.style.overflow = '';
+    });
+
+    // Refresh tree data when refresh button is clicked
+    if (refreshTreeBtn) {
+        refreshTreeBtn.addEventListener('click', function () {
+            fetchWisunTreeData();
+        });
+    }
+
+    // Show connected nodes when button is clicked
+    if (connectedNodesBtn) {
+        connectedNodesBtn.addEventListener('click', function () {
+            fetchConnectedNodes();
+        });
+    }
+
+    // Show disconnected nodes when button is clicked
+    if (disconnectedNodesBtn) {
+        disconnectedNodesBtn.addEventListener('click', function () {
+            fetchDisconnectedNodes();
+        });
+    }
+
+    function hideAllContent() {
+        const elements = ['wisunTreeContent', 'connectedNodesContent', 'disconnectedNodesContent'];
+        elements.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.classList.add('d-none');
+        });
+    }
+
+    function showLoading(message = 'Fetching Wi-SUN data...') {
+        const loadingElement = document.getElementById('wisunTreeLoading');
+        const errorElement = document.getElementById('wisunTreeError');
+        const loadingText = document.querySelector('#wisunTreeLoading p');
+        
+        if (loadingElement) loadingElement.classList.remove('d-none');
+        if (errorElement) errorElement.classList.add('d-none');
+        if (loadingText) loadingText.textContent = message;
+        hideAllContent();
+    }
+
+    function hideLoading() {
+        const loadingElement = document.getElementById('wisunTreeLoading');
+        if (loadingElement) loadingElement.classList.add('d-none');
+    }
+
+    function showError(errorText) {
+        hideLoading();
+        const errorTextElement = document.getElementById('wisunTreeErrorText');
+        const errorElement = document.getElementById('wisunTreeError');
+        
+        if (errorTextElement) errorTextElement.textContent = errorText;
+        if (errorElement) errorElement.classList.remove('d-none');
+    }
+
+    function fetchWisunTreeData() {
+        showLoading('Fetching Wi-SUN tree status...');
+        if (refreshTreeBtn) refreshTreeBtn.disabled = true;
+
+        fetch('/api/wisun_tree')
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (refreshTreeBtn) refreshTreeBtn.disabled = false;
+
+                if (data.success) {
+                    document.getElementById('wisunTreeTimestamp').textContent = data.timestamp;
+                    document.getElementById('wisunTreeDeviceCount').textContent = data.device_count || 0;
+                    document.getElementById('wisunTreeOutput').textContent = data.output;
+                    document.getElementById('wisunTreeContent').classList.remove('d-none');
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showError('Network error: ' + error.message);
+                if (refreshTreeBtn) refreshTreeBtn.disabled = false;
+            });
+    }
+
+    function fetchConnectedNodes() {
+        showLoading('Fetching connected nodes...');
+
+        fetch('/api/wisun_nodes/connected')
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+
+                if (data.success) {
+                    document.getElementById('connectedNodesTimestamp').textContent = data.timestamp;
+                    document.getElementById('connectedNodesCount').textContent = data.count;
+                    document.getElementById('connectedNodesTotalCount').textContent = data.total_nodes;
+                    
+                    const rawTextHtml = createNodesRawText(data.nodes, 'connected');
+                    document.getElementById('connectedNodesList').innerHTML = rawTextHtml;
+                    document.getElementById('connectedNodesContent').classList.remove('d-none');
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showError('Network error: ' + error.message);
+            });
+    }
+
+    function fetchDisconnectedNodes() {
+        showLoading('Fetching disconnected nodes...');
+
+        fetch('/api/wisun_nodes/disconnected')
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+
+                if (data.success) {
+                    document.getElementById('disconnectedNodesTimestamp').textContent = data.timestamp;
+                    document.getElementById('disconnectedNodesCount').textContent = data.count;
+                    document.getElementById('disconnectedNodesTotalCount').textContent = data.total_nodes;
+                    
+                    const rawTextHtml = createNodesRawText(data.nodes, 'disconnected');
+                    document.getElementById('disconnectedNodesList').innerHTML = rawTextHtml;
+                    document.getElementById('disconnectedNodesContent').classList.remove('d-none');
+                } else {
+                    showError(data.error);
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showError('Network error: ' + error.message);
+            });
+    }
+
+    function createNodesRawText(nodes, type) {
+        if (!nodes || nodes.length === 0) {
+            return `<div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No ${type} nodes found.
+            </div>`;
+        }
+
+        let rawText = "Sr No".padEnd(8) + "Device Name".padEnd(25) + "IP Address".padEnd(42) + "Hop Count".padEnd(15) + "Pole No\n";
+
+        // Add separator line
+        rawText += "─".repeat(100) + "\n";
+
+        nodes.forEach((node, index) => {
+            const serialNo = `${index + 1}.`.padEnd(8);
+            const deviceName = node.device_name.padEnd(25);
+            const ipAddress = node.ip.padEnd(42);
+            const hopCount = (node.hop_count !== undefined ? node.hop_count.toString() : '-').padEnd(15);
+            const poleNumber = node.pole_number || 'Unknown';
+            
+            rawText += `${serialNo}${deviceName}${ipAddress}${hopCount}${poleNumber}\n`;
+        });
+
+        return `<pre class="bg-dark text-light p-3 rounded" style="max-height: 500px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre;">${rawText}</pre>`;
+    }
+
+    function createNodesTable(nodes, type) {
+        if (!nodes || nodes.length === 0) {
+            return `<div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No ${type} nodes found.
+            </div>`;
+        }
+
+        let tableHtml = `
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>#</th>
+                        <th>Device Name</th>
+                        <th>IP Address</th>
+                        <th>Hop Count</th>
+                        <th>Pole No</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        nodes.forEach((node, index) => {
+            const statusClass = type === 'connected' ? 'text-success' : 'text-danger';
+            const statusIcon = type === 'connected' ? 'fa-check-circle' : 'fa-times-circle';
+            
+            tableHtml += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td class="${statusClass}">
+                        <i class="fas ${statusIcon} me-1"></i>
+                        ${node.device_name}
+                    </td>
+                    <td class="font-monospace">${node.ip}</td>
+                    <td>${node.hop_count !== undefined ? node.hop_count : '-'}</td>
+                    <td>${node.pole_number || 'Unknown'}</td>
+                </tr>`;
+        });
+
+        tableHtml += `
+                </tbody>
+            </table>`;
+
+        return tableHtml;
+    }
+}
 document.addEventListener('DOMContentLoaded', function () {
     console.log('Availability test page loaded');
 });

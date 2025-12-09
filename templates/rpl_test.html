@@ -10,10 +10,10 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex align-items-center mb-4">
-            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary me-3">
-                <i class="fas fa-arrow-left"></i> Back
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary rounded-circle me-3">
+                <i class="fas fa-arrow-left"></i>
             </a>
-            <h1 class="mb-0"><i class="fas fa-sitemap me-2 text-info"></i>{{ config.name }}</h1>
+            <h1 class="mb-0"><i class="fas fa-route me-2 text-info"></i>{{ config.name }}</h1>
         </div>
         <p class="lead">{{ config.description }}</p>
     </div>
@@ -50,7 +50,7 @@
                                     <label for="output_format" class="form-label fw-bold">
                                         <i class="fas fa-file-export me-1"></i>Output Format
                                     </label>
-                                    <select class="form-control form-control-lg" id="output_format" name="output_format" required>
+                                    <select class="form-select form-select-lg" id="output_format" name="output_format" required>
                                         <option value="txt">📄 Text File (.txt)</option>
                                         <option value="pdf">📕 PDF Document (.pdf)</option>
                                         <option value="word" selected>📘 Word Document (.docx)</option>
@@ -121,109 +121,80 @@
                     <span id="wisunTreeErrorText"></span>
                 </div>
 
-                <!-- Success Content -->
+                <!-- Success Content - Tree View -->
                 <div id="wisunTreeContent" class="d-none">
                     <div class="row mb-3">
                         <div class="col-6">
                             <p class="mb-1"><strong>Generated:</strong> <span id="wisunTreeTimestamp"></span></p>
                         </div>
                         <div class="col-6 text-end">
-                            <p class="mb-1"><strong>Total Devices:</strong> <span id="wisunTreeDeviceCount"
+                            <p class="mb-1"><strong>Total Connected:</strong> <span id="wisunTreeDeviceCount"
                                     class="badge bg-primary">-</span></p>
                         </div>
                     </div>
                     <pre id="wisunTreeOutput" class="bg-dark text-light p-3 rounded"
                         style="max-height: 500px; overflow-y: auto;"></pre>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button id="refreshTreeBtn" class="btn btn-success">
-                    <i class="fas fa-sync-alt me-1"></i>
-                    Refresh
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-</div>
 
-<!-- Commands Modal -->
-<div class="modal fade" id="commandsModal" tabindex="-1" aria-labelledby="commandsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="commandsModalLabel">
-                    <i class="fas fa-terminal text-info me-2"></i>
-                    Test Commands Reference
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted mb-4">Copy and use this command to manually test devices:</p>
-                
-                <!-- RPL Command -->
-                <div class="mb-4">
-                    <h6 class="fw-bold text-success">
-                        <i class="fas fa-route me-2"></i>RPL Command
-                    </h6>
-                    <div class="input-group">
-                        <input type="text" class="form-control font-monospace" 
-                               value="coap-client-notls -m post -N -B 100 -t text coap://[ip_address]:5683/om2m" 
-                               id="rplCommand" readonly>
-                        <button class="btn btn-outline-secondary" type="button" onclick="copyCommand('rplCommand')">
-                            <i class="fas fa-copy me-1"></i>Copy
-                        </button>
+                <!-- Connected Nodes Content -->
+                <div id="connectedNodesContent" class="d-none">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <p class="mb-1"><strong>Generated:</strong> <span id="connectedNodesTimestamp"></span></p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p class="mb-1">
+                                <strong>Connected:</strong> 
+                                <span id="connectedNodesCount" class="badge bg-success">-</span>
+                                /
+                                <span id="connectedNodesTotalCount" class="badge bg-primary">-</span>
+                            </p>
+                        </div>
                     </div>
-                    <small class="text-muted">Replace [ip_address] with the target device IP</small>
+                    <div id="connectedNodesList" class="table-responsive">
+                        <!-- Connected nodes table will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Disconnected Nodes Content -->
+                <div id="disconnectedNodesContent" class="d-none">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <p class="mb-1"><strong>Generated:</strong> <span id="disconnectedNodesTimestamp"></span></p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p class="mb-1">
+                                <strong>Disconnected:</strong> 
+                                <span id="disconnectedNodesCount" class="badge bg-danger">-</span>
+                                /
+                                <span id="disconnectedNodesTotalCount" class="badge bg-primary">-</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div id="disconnectedNodesList" class="table-responsive">
+                        <!-- Disconnected nodes table will be populated here -->
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success btn-sm me-2" id="connectedNodesBtn">
+                    <i class="fas fa-plug me-1"></i>
+                    Connected
+                </button>
+                <button type="button" class="btn btn-danger btn-sm me-2" id="disconnectedNodesBtn">
+                    <i class="fas fa-unlink me-1"></i>
+                    Disconnected
+                </button>
+                <button id="refreshTreeBtn" class="btn btn-info btn-sm me-2">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    Refresh
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-    // Copy command functionality
-    function copyCommand(inputId) {
-        const input = document.getElementById(inputId);
-        input.select();
-        input.setSelectionRange(0, 99999); // For mobile devices
-        
-        try {
-            navigator.clipboard.writeText(input.value).then(() => {
-                // Show success feedback
-                const button = input.nextElementSibling;
-                const originalHTML = button.innerHTML;
-                button.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
-                button.classList.remove('btn-outline-secondary');
-                button.classList.add('btn-success');
-                
-                setTimeout(() => {
-                    button.innerHTML = originalHTML;
-                    button.classList.remove('btn-success');
-                    button.classList.add('btn-outline-secondary');
-                }, 2000);
-            });
-        } catch (err) {
-            // Fallback for older browsers
-            document.execCommand('copy');
-            const button = input.nextElementSibling;
-            const originalHTML = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
-            button.classList.remove('btn-outline-secondary');
-            button.classList.add('btn-success');
-            
-            setTimeout(() => {
-                button.innerHTML = originalHTML;
-                button.classList.remove('btn-success');
-                button.classList.add('btn-outline-secondary');
-            }, 2000);
-        }
-    }
-</script>
+</div>
 
 <script>
     // Wi-SUN Tree functionality
@@ -395,6 +366,84 @@
         </div>
     </div>
 </div>
+
+<!-- Commands Modal -->
+<div class="modal fade" id="commandsModal" tabindex="-1" aria-labelledby="commandsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="commandsModalLabel">
+                    <i class="fas fa-terminal text-info me-2"></i>
+                    Test Commands Reference
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-4">Copy and use this command to manually test RPL routing:</p>
+                
+                <!-- RPL Command -->
+                <div class="mb-4">
+                    <h6 class="fw-bold text-primary">
+                        <i class="fas fa-route me-2"></i>RPL Routing Command
+                    </h6>
+                    <div class="input-group">
+                        <input type="text" class="form-control font-monospace" 
+                               value="coap-client-notls -m post -N -B 100 -t text coap://[IPV6 Address]:5683/om2m" 
+                               id="rplCommand" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyCommand('rplCommand')">
+                            <i class="fas fa-copy me-1"></i>Copy
+                        </button>
+                    </div>
+                    <small class="text-muted">Replace IPV6 Address with the target device IPv6</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Copy command functionality
+    function copyCommand(inputId) {
+        const input = document.getElementById(inputId);
+        input.select();
+        input.setSelectionRange(0, 99999); // For mobile devices
+        
+        try {
+            navigator.clipboard.writeText(input.value).then(() => {
+                // Show success feedback
+                const button = input.nextElementSibling;
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+                button.classList.remove('btn-outline-secondary');
+                button.classList.add('btn-success');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.classList.remove('btn-success');
+                    button.classList.add('btn-outline-secondary');
+                }, 2000);
+            });
+        } catch (err) {
+            // Fallback for older browsers
+            document.execCommand('copy');
+            const button = input.nextElementSibling;
+            const originalHTML = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+            button.classList.remove('btn-outline-secondary');
+            button.classList.add('btn-success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalHTML;
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-secondary');
+            }, 2000);
+        }
+    }
+</script>
+
 {% endblock %}
 
 {% block scripts %}

@@ -6,10 +6,10 @@
 <div class="row">
     <div class="col-12">
         <div class="d-flex align-items-center mb-4">
-            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary me-3">
-                <i class="fas fa-arrow-left"></i> Back
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary rounded-circle me-3">
+                <i class="fas fa-arrow-left"></i>
             </a>
-            <h1 class="mb-0"><i class="fas fa-wifi me-2 text-primary"></i>{{ config.name }}</h1>
+            <h1 class="mb-0"><i class="fas fa-mobile-alt me-2 text-primary"></i>{{ config.name }}</h1>
         </div>
         <p class="lead">{{ config.description }}</p>
     </div>
@@ -99,7 +99,7 @@
             <div class="modal-header">
                 <h5 class="modal-title" id="wisunTreeModalLabel">
                     <i class="fas fa-sitemap text-success me-2"></i>
-                    Wi-SUN Network Tree Status
+                    Wi-SUN Network Status
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -109,7 +109,7 @@
                     <div class="spinner-border text-success" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
-                    <p class="mt-3">Fetching Wi-SUN tree status...</p>
+                    <p class="mt-3">Fetching Wi-SUN data...</p>
                 </div>
 
                 <!-- Error Message -->
@@ -118,27 +118,75 @@
                     <span id="wisunTreeErrorText"></span>
                 </div>
 
-                <!-- Success Content -->
+                <!-- Success Content - Tree View -->
                 <div id="wisunTreeContent" class="d-none">
                     <div class="row mb-3">
                         <div class="col-6">
                             <p class="mb-1"><strong>Generated:</strong> <span id="wisunTreeTimestamp"></span></p>
                         </div>
                         <div class="col-6 text-end">
-                            <p class="mb-1"><strong>Total Devices:</strong> <span id="wisunTreeDeviceCount"
+                            <p class="mb-1"><strong>Total Connected:</strong> <span id="wisunTreeDeviceCount"
                                     class="badge bg-primary">-</span></p>
                         </div>
                     </div>
                     <pre id="wisunTreeOutput" class="bg-dark text-light p-3 rounded"
                         style="max-height: 500px; overflow-y: auto;"></pre>
                 </div>
+
+                <!-- Connected Nodes Content -->
+                <div id="connectedNodesContent" class="d-none">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <p class="mb-1"><strong>Generated:</strong> <span id="connectedNodesTimestamp"></span></p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p class="mb-1">
+                                <strong>Connected:</strong> 
+                                <span id="connectedNodesCount" class="badge bg-success">-</span>
+                                /
+                                <span id="connectedNodesTotalCount" class="badge bg-primary">-</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div id="connectedNodesList" class="table-responsive">
+                        <!-- Connected nodes table will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Disconnected Nodes Content -->
+                <div id="disconnectedNodesContent" class="d-none">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <p class="mb-1"><strong>Generated:</strong> <span id="disconnectedNodesTimestamp"></span></p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p class="mb-1">
+                                <strong>Disconnected:</strong> 
+                                <span id="disconnectedNodesCount" class="badge bg-danger">-</span>
+                                /
+                                <span id="disconnectedNodesTotalCount" class="badge bg-primary">-</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div id="disconnectedNodesList" class="table-responsive">
+                        <!-- Disconnected nodes table will be populated here -->
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button id="refreshTreeBtn" class="btn btn-success">
+                <button type="button" class="btn btn-success btn-sm me-2" id="connectedNodesBtn">
+                    <i class="fas fa-plug me-1"></i>
+                    Connected
+                </button>
+                <button type="button" class="btn btn-danger btn-sm me-2" id="disconnectedNodesBtn">
+                    <i class="fas fa-unlink me-1"></i>
+                    Disconnected
+                </button>
+                <button id="refreshTreeBtn" class="btn btn-info btn-sm me-2">
                     <i class="fas fa-sync-alt me-1"></i>
                     Refresh
                 </button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -223,115 +271,20 @@
 </script>
 
 <script>
-    // Wi-SUN Tree functionality
-    document.addEventListener('DOMContentLoaded', function () {
-        const wisunTreeBtn = document.getElementById('wisunTreeBtn');
-        const wisunTreeModal = new bootstrap.Modal(document.getElementById('wisunTreeModal'));
-        const refreshTreeBtn = document.getElementById('refreshTreeBtn');
-
-        // Show modal and fetch data when button is clicked
-        wisunTreeBtn.addEventListener('click', function () {
-            wisunTreeModal.show();
-            fetchWisunTreeData();
-        });
-
-        // Refresh data when refresh button is clicked
-        refreshTreeBtn.addEventListener('click', function () {
-            fetchWisunTreeData();
-        });
-
-        function fetchWisunTreeData() {
-            // Show loading state
-            document.getElementById('wisunTreeLoading').classList.remove('d-none');
-            document.getElementById('wisunTreeError').classList.add('d-none');
-            document.getElementById('wisunTreeContent').classList.add('d-none');
-            refreshTreeBtn.disabled = true;
-
-            fetch('/api/wisun_tree')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('wisunTreeLoading').classList.add('d-none');
-                    refreshTreeBtn.disabled = false;
-
-                    if (data.success) {
-                        // Show success content
-                        document.getElementById('wisunTreeTimestamp').textContent = data.timestamp;
-                        document.getElementById('wisunTreeDeviceCount').textContent = data.device_count || 0;
-                        document.getElementById('wisunTreeOutput').textContent = data.output;
-                        document.getElementById('wisunTreeContent').classList.remove('d-none');
-                    } else {
-                        // Show error
-                        document.getElementById('wisunTreeErrorText').textContent = data.error;
-                        document.getElementById('wisunTreeError').classList.remove('d-none');
-                    }
-                })
-                .catch(error => {
-                    document.getElementById('wisunTreeLoading').classList.add('d-none');
-                    document.getElementById('wisunTreeErrorText').textContent = 'Network error: ' + error.message;
-                    document.getElementById('wisunTreeError').classList.remove('d-none');
-                    refreshTreeBtn.disabled = false;
-                });
-        }
-
-        function showNotification(message, type) {
-            const alertClass = type === 'error' ? 'alert-danger' : 'alert-success';
-            const notification = document.createElement('div');
-            notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
-            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            notification.innerHTML = `
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-
-            document.body.appendChild(notification);
-
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 5000);
-        }
-    });
-
-    // Handle retest button clicks
-    document.addEventListener('click', function (e) {
-        if (e.target.classList.contains('retest-btn') || e.target.closest('.retest-btn')) {
-            const button = e.target.closest('.retest-btn');
-            const row = button.closest('tr');
-            const ipAddress = row.querySelector('.ip-address').textContent;
-            const deviceLabel = row.querySelector('.device-label').textContent;
-
-            retestDevice(ipAddress, deviceLabel, button);
-        }
-    });
-
-    function retestDevice(ipAddress, deviceLabel, button) {
-        // Disable button and show loading state
-        button.disabled = true;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
-
-        // Here you would make an API call to retest the specific device
-        // For now, we'll simulate a retest
-        setTimeout(() => {
-            button.disabled = false;
-            button.innerHTML = '<i class="fas fa-redo"></i> Retest';
-
-            // Show notification
-            showNotification(`Retest completed for ${deviceLabel}`, 'success');
-        }, 2000);
-    }
+    // Wi-SUN Tree functionality moved to ping_test.js
+    // The functionality is now initialized in initializeWisunTreeFeatures() function
 </script>
 
 <!-- Ping Test Results Table -->
 <div class="row mb-4">
     <div class="col-12">
         <div class="card">
-            <div class="card-header bg-info text-white">
+            <div class="card-header bg-primary text-white">
                 <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Ping Test Results</h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-sm table-bordered table-striped table-hover" id="resultsTable">
+                    <table class="table table-bordered table-striped table-hover" id="resultsTable">
                         <thead class="table-dark">
                             <tr>
                                 <th><i class="fas fa-hashtag me-1"></i>Sr No.</th>

@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}Distance Calculation Test - Wi-SUN Network Test 2025{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex align-items-center mb-4">
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary rounded-circle me-3">
+                <i class="fas fa-arrow-left"></i>
+            </a>
+            <h1 class="mb-0"><i class="fas fa-ruler-horizontal me-2 text-purple"></i>Distance Calculation Test</h1>
+        </div>
+        <p class="lead">Calculate distances between parent and child nodes in Wi-SUN network tree based on GPS coordinates</p>
+    </div>
+</div>
+
+<!-- Test Controls -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Input Configuration</h5>
+            </div>
+            <div class="card-body">
+                <!-- File Upload Section -->
+                <div class="mb-3">
+                    <label for="treeFile" class="form-label fw-bold mb-1">
+                        <i class="fas fa-file-alt me-1"></i>Select Wi-SUN Tree File
+                    </label>
+                    <input type="file" class="form-control form-control-sm w-25" id="treeFile" accept=".txt">
+                    <div class="form-text">Select a text file containing the Wi-SUN network tree structure</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex gap-2">
+                    <button type="button" id="calculateBtn" class="btn btn-success btn-sm">
+                        <i class="fas fa-calculator me-1"></i>Calculate
+                    </button>
+                    <button type="button" id="pasteTextBtn" class="btn btn-primary btn-sm">
+                        <i class="fas fa-paste me-1"></i>Paste Text
+                    </button>
+                    <button type="button" id="clearBtn" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-eraser me-1"></i>Clear
+                    </button>
+                    <button type="button" id="wisunTreeBtn" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-sitemap me-1"></i>Wi-SUN Tree
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loadingSpinner" class="row mb-4" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3 mb-0 fw-bold">Calculating distances...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Table -->
+<div id="resultsSection" class="row mb-4" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0"><i class="fas fa-table me-2"></i>Distance Results</h6>
+                <span class="badge bg-light text-dark" id="resultsCount">0 Results</span>
+            </div>
+            <div class="card-body p-1">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped table-hover mb-0" id="resultsTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 6%;">Sr No</th>
+                                <th style="width: 40%;">Parent Node</th>
+                                <th style="width: 40%;">Child Node</th>
+                                <th style="width: 14%;" class="text-center">Distance (m)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTableBody">
+                            <!-- Results will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Summary -->
+<div id="statisticsSection" class="row mb-4" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Statistics Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 col-6">
+                        <div class="text-center">
+                            <h5 class="text-primary mb-0" id="statTotalConnections">0</h5>
+                            <small class="text-muted">Total Connections</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="text-center">
+                            <h5 class="text-success mb-0" id="statMaxDistance">0 m</h5>
+                            <small class="text-muted">Max Distance</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="text-center">
+                            <h5 class="text-warning mb-0" id="statMinDistance">0 m</h5>
+                            <small class="text-muted">Min Distance</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="text-center">
+                            <h5 class="text-info mb-0" id="statAvgDistance">0 m</h5>
+                            <small class="text-muted">Average Distance</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12 text-center">
+                        <button type="button" id="downloadWordBtn" class="btn btn-primary">
+                            <i class="fas fa-file-word me-2"></i>Download Word Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Skipped Connections -->
+<div id="skippedSection" class="row mb-4" style="display: none;">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Skipped Connections</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">The following connections were skipped due to missing coordinate information:</p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Parent Node</th>
+                                <th>Child Node</th>
+                            </tr>
+                        </thead>
+                        <tbody id="skippedTableBody">
+                            <!-- Skipped items will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Messages -->
+<div id="alertContainer" class="row mb-4" style="display: none;">
+    <div class="col-12">
+        <div class="alert alert-dismissible fade show" role="alert" id="alertBox">
+            <span id="alertMessage"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Wi-SUN Tree Modal -->
+<div class="modal fade" id="wisunTreeModal" tabindex="-1" aria-labelledby="wisunTreeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="wisunTreeModalLabel">
+                    <i class="fas fa-sitemap text-success me-2"></i>
+                    Wi-SUN Network Status
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Loading Spinner -->
+                <div id="wisunTreeLoading" class="text-center">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3">Fetching Wi-SUN data...</p>
+                </div>
+
+                <!-- Error Message -->
+                <div id="wisunTreeError" class="alert alert-danger d-none" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="wisunTreeErrorText"></span>
+                </div>
+
+                <!-- Success Content - Tree View -->
+                <div id="wisunTreeContent" class="d-none">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <p class="mb-1"><strong>Generated:</strong> <span id="wisunTreeTimestamp"></span></p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p class="mb-1"><strong>Total Connected:</strong> <span id="wisunTreeDeviceCount" class="badge bg-primary">-</span></p>
+                        </div>
+                    </div>
+                    <pre id="wisunTreeOutput" class="bg-dark text-light p-3 rounded" style="max-height: 500px; overflow-y: auto;"></pre>
+                </div>
+
+                <!-- Connected Nodes Content -->
+                <div id="connectedNodesContent" class="d-none">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <p class="mb-1"><strong>Generated:</strong> <span id="connectedNodesTimestamp"></span></p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p class="mb-1">
+                                <strong>Connected:</strong> 
+                                <span id="connectedNodesCount" class="badge bg-success">-</span>
+                                /
+                                <span id="connectedNodesTotalCount" class="badge bg-primary">-</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div id="connectedNodesList" class="table-responsive">
+                        <!-- Connected nodes table will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Disconnected Nodes Content -->
+                <div id="disconnectedNodesContent" class="d-none">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <p class="mb-1"><strong>Generated:</strong> <span id="disconnectedNodesTimestamp"></span></p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p class="mb-1">
+                                <strong>Disconnected:</strong> 
+                                <span id="disconnectedNodesCount" class="badge bg-danger">-</span>
+                                /
+                                <span id="disconnectedNodesTotalCount" class="badge bg-primary">-</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div id="disconnectedNodesList" class="table-responsive">
+                        <!-- Disconnected nodes table will be populated here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success btn-sm me-2" id="connectedNodesBtn">
+                    <i class="fas fa-plug me-1"></i>
+                    Connected
+                </button>
+                <button type="button" class="btn btn-danger btn-sm me-2" id="disconnectedNodesBtn">
+                    <i class="fas fa-unlink me-1"></i>
+                    Disconnected
+                </button>
+                <button id="refreshTreeBtn" class="btn btn-info btn-sm me-2">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    Refresh
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Paste Text Modal -->
+<div class="modal fade" id="pasteTextModal" tabindex="-1" aria-labelledby="pasteTextModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="pasteTextModalLabel">
+                    <i class="fas fa-paste me-2"></i>Paste Wi-SUN Tree Structure
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="modalTreeText" class="form-label fw-bold">
+                        <i class="fas fa-keyboard me-1"></i>Wi-SUN Tree Text
+                    </label>
+                    <textarea class="form-control" id="modalTreeText" rows="15" 
+                        placeholder="Paste your Wi-SUN tree structure here...&#10;&#10;Example:&#10;fd12:3456::b635:22ff:fe98:2536&#10;  |- fd12:3456::62a4:23ff:fe37:a3a9&#10;  |    `- fd12:3456::b635:22ff:fe98:2529&#10;  |         |- fd12:3456::62a4:23ff:fe37:a3a8&#10;  |         |    `- fd12:3456::b635:22ff:fe98:253f"></textarea>
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Paste the complete Wi-SUN network tree structure in ASCII format
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-success" id="confirmPasteBtn">
+                    <i class="fas fa-check me-1"></i>Confirm & Calculate
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/distance_test.css') }}">
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/distance_test.js') }}"></script>
+{% endblock %}

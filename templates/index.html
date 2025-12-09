@@ -20,7 +20,7 @@
             <div class="card-body">
                 <h5 class="card-title">
                     {% if test_key == 'ping' %}
-                    <i class="fas fa-signal text-success me-2"></i>
+                    <i class="fas fa-mobile-alt text-primary me-2"></i>
                     {% elif test_key == 'rssl' %}
                     <i class="fas fa-wifi text-warning me-2"></i>
                     {% elif test_key == 'rpl' %}
@@ -28,7 +28,7 @@
                     {% elif test_key == 'disconnections' %}
                     <i class="fas fa-unlink text-danger me-2"></i>
                     {% elif test_key == 'availability' %}
-                    <i class="fas fa-check-circle text-primary me-2"></i>
+                    <i class="fas fa-heartbeat text-success me-2"></i>
                     {% endif %}
                     {{ test_config.name }}
                 </h5>
@@ -43,6 +43,25 @@
         </div>
     </div>
     {% endfor %}
+    
+    <!-- Special Tests -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-info">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-ruler-horizontal text-purple me-2"></i>
+                    Distance Calculation Test
+                </h5>
+                <p class="card-text">Calculate distances between parent and child nodes based on GPS coordinates</p>
+                <div class="mt-auto">
+                    <a href="{{ url_for('distance_test_page') }}" class="btn btn-primary">
+                        <i class="fas fa-calculator me-1"></i>
+                        Calculate Distances
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="row mt-5">
@@ -65,6 +84,7 @@
                         <ul class="list-unstyled mb-0">
                             <li><strong>Disconnections Test:</strong> Checks disconnection statistics</li>
                             <li><strong>Availability Test:</strong> Tests device availability</li>
+                            <li><strong>Distance Test:</strong> Calculates distances between nodes using GPS coordinates</li>
                         </ul>
                     </div>
                 </div>

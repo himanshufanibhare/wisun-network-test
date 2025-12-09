@@ -1,0 +1,13 @@
+/* Hide dropdown arrow for output format select */
+#output_format {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: none;
+    padding-right: 1rem;
+}
+
+/* Remove default select styling */
+#output_format::-ms-expand {
+    display: none;
+}
