@@ -22,6 +22,9 @@ function initializeEventListeners() {
     // Download Word button
     document.getElementById('downloadWordBtn').addEventListener('click', handleDownloadWord);
     
+    // Wi-SUN Tree button
+    document.getElementById('wisunTreeBtn').addEventListener('click', handleWisunTree);
+    
     // File input change
     document.getElementById('treeFile').addEventListener('change', function() {
         if (this.files.length > 0) {
@@ -279,4 +282,140 @@ function getCurrentTimestamp() {
         String(now.getHours()).padStart(2, '0') +
         String(now.getMinutes()).padStart(2, '0') +
         String(now.getSeconds()).padStart(2, '0');
+}
+
+// Wi-SUN Tree Modal Functions
+function handleWisunTree() {
+    const modal = new bootstrap.Modal(document.getElementById('wisunTreeModal'));
+    modal.show();
+    fetchWisunTreeData();
+    
+    // Setup button handlers
+    document.getElementById('connectedNodesBtn').addEventListener('click', fetchConnectedNodes);
+    document.getElementById('disconnectedNodesBtn').addEventListener('click', fetchDisconnectedNodes);
+    document.getElementById('refreshTreeBtn').addEventListener('click', fetchWisunTreeData);
+}
+
+function fetchWisunTreeData() {
+    showWisunLoading('Fetching Wi-SUN tree status...');
+    
+    fetch('/api/wisun_tree')
+        .then(response => response.json())
+        .then(data => {
+            hideWisunLoading();
+            
+            if (data.success) {
+                document.getElementById('wisunTreeTimestamp').textContent = data.timestamp;
+                document.getElementById('wisunTreeDeviceCount').textContent = data.device_count || 0;
+                document.getElementById('wisunTreeOutput').textContent = data.output;
+                document.getElementById('wisunTreeContent').classList.remove('d-none');
+            } else {
+                showWisunError(data.error);
+            }
+        })
+        .catch(error => {
+            hideWisunLoading();
+            showWisunError('Network error: ' + error.message);
+        });
+}
+
+function fetchConnectedNodes() {
+    showWisunLoading('Fetching connected nodes...');
+    
+    fetch('/api/wisun_nodes/connected')
+        .then(response => response.json())
+        .then(data => {
+            hideWisunLoading();
+            
+            if (data.success) {
+                document.getElementById('connectedNodesTimestamp').textContent = data.timestamp;
+                document.getElementById('connectedNodesCount').textContent = data.count;
+                document.getElementById('connectedNodesTotalCount').textContent = data.total_nodes;
+                
+                const nodesHtml = createNodesTable(data.nodes, 'connected');
+                document.getElementById('connectedNodesList').innerHTML = nodesHtml;
+                document.getElementById('connectedNodesContent').classList.remove('d-none');
+            } else {
+                showWisunError(data.error);
+            }
+        })
+        .catch(error => {
+            hideWisunLoading();
+            showWisunError('Network error: ' + error.message);
+        });
+}
+
+function fetchDisconnectedNodes() {
+    showWisunLoading('Fetching disconnected nodes...');
+    
+    fetch('/api/wisun_nodes/disconnected')
+        .then(response => response.json())
+        .then(data => {
+            hideWisunLoading();
+            
+            if (data.success) {
+                document.getElementById('disconnectedNodesTimestamp').textContent = data.timestamp;
+                document.getElementById('disconnectedNodesCount').textContent = data.count;
+                document.getElementById('disconnectedNodesTotalCount').textContent = data.total_nodes;
+                
+                const nodesHtml = createNodesTable(data.nodes, 'disconnected');
+                document.getElementById('disconnectedNodesList').innerHTML = nodesHtml;
+                document.getElementById('disconnectedNodesContent').classList.remove('d-none');
+            } else {
+                showWisunError(data.error);
+            }
+        })
+        .catch(error => {
+            hideWisunLoading();
+            showWisunError('Network error: ' + error.message);
+        });
+}
+
+function createNodesTable(nodes, type) {
+    if (!nodes || nodes.length === 0) {
+        return `<div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            No ${type} nodes found.
+        </div>`;
+    }
+
+    let rawText = "Sr No".padEnd(8) + "Device Name".padEnd(25) + "IP Address".padEnd(42) + "Hop Count".padEnd(15) + "Pole No\n";
+    rawText += "─".repeat(100) + "\n";
+
+    nodes.forEach((node, index) => {
+        const serialNo = `${index + 1}.`.padEnd(8);
+        const deviceName = node.device_name.padEnd(25);
+        const ipAddress = node.ip.padEnd(42);
+        const hopCount = (node.hop_count !== undefined ? node.hop_count.toString() : '-').padEnd(15);
+        const poleNumber = node.pole_number || 'Unknown';
+        
+        rawText += `${serialNo}${deviceName}${ipAddress}${hopCount}${poleNumber}\n`;
+    });
+
+    return `<pre class="bg-dark text-light p-3 rounded" style="max-height: 500px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; white-space: pre;">${rawText}</pre>`;
+}
+
+function showWisunLoading(message) {
+    const loadingDiv = document.getElementById('wisunTreeLoading');
+    const errorDiv = document.getElementById('wisunTreeError');
+    const contentDiv = document.getElementById('wisunTreeContent');
+    const connectedDiv = document.getElementById('connectedNodesContent');
+    const disconnectedDiv = document.getElementById('disconnectedNodesContent');
+    
+    loadingDiv.classList.remove('d-none');
+    errorDiv.classList.add('d-none');
+    contentDiv.classList.add('d-none');
+    connectedDiv.classList.add('d-none');
+    disconnectedDiv.classList.add('d-none');
+    
+    loadingDiv.querySelector('p').textContent = message;
+}
+
+function hideWisunLoading() {
+    document.getElementById('wisunTreeLoading').classList.add('d-none');
+}
+
+function showWisunError(message) {
+    document.getElementById('wisunTreeErrorText').textContent = message;
+    document.getElementById('wisunTreeError').classList.remove('d-none');
 }
